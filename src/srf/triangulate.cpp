@@ -33,18 +33,15 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
         }
 
         // Start with the outer contour
-        SContour merged;
-        ZERO(&merged);
+        SContour merged = {};
         top->tag = 1;
         top->CopyInto(&merged);
         (merged.l.n)--;
 
         // List all of the edges, for testing whether bridges work.
-        SEdgeList el;
-        ZERO(&el);
+        SEdgeList el = {};
         top->MakeEdgesInto(&el);
-        List<Vector> vl;
-        ZERO(&vl);
+        List<Vector> vl = {};
 
         // And now find all of its holes. Note that we will also find any
         // outer contours that lie entirely within this contour, and any
@@ -108,7 +105,7 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
     }
 }
 
-bool SContour::BridgeToContour(SContour *sc, 
+bool SContour::BridgeToContour(SContour *sc,
                                SEdgeList *avoidEdges, List<Vector> *avoidPts)
 {
     int i, j;
@@ -136,7 +133,7 @@ bool SContour::BridgeToContour(SContour *sc,
     }
 
     int thisp, scp;
-   
+
     Vector a, b, *f;
 
     // First check if the contours share a point; in that case we should
@@ -191,8 +188,7 @@ bool SContour::BridgeToContour(SContour *sc,
     return false;
 
 haveEdge:
-    SContour merged;
-    ZERO(&merged);
+    SContour merged = {};
     for(i = 0; i < l.n; i++) {
         merged.AddPoint(l.elem[i].p);
         if(i == thisp) {
@@ -221,8 +217,7 @@ bool SContour::IsEar(int bp, double scaledEps) {
     int ap = WRAP(bp-1, l.n),
         cp = WRAP(bp+1, l.n);
 
-    STriangle tr;
-    ZERO(&tr);
+    STriangle tr = {};
     tr.a = l.elem[ap].p;
     tr.b = l.elem[bp].p;
     tr.c = l.elem[cp].p;
@@ -248,7 +243,7 @@ bool SContour::IsEar(int bp, double scaledEps) {
     int i;
     for(i = 0; i < l.n; i++) {
         if(i == ap || i == bp || i == cp) continue;
-        
+
         Vector p = l.elem[i].p;
         if(p.OutsideAndNotOn(maxv, minv)) continue;
 
@@ -258,7 +253,7 @@ bool SContour::IsEar(int bp, double scaledEps) {
         if(p.EqualsExactly(tr.a)) continue;
         if(p.EqualsExactly(tr.b)) continue;
         if(p.EqualsExactly(tr.c)) continue;
-            
+
         if(tr.ContainsPointProjd(n, p)) {
             return false;
         }
@@ -269,9 +264,8 @@ bool SContour::IsEar(int bp, double scaledEps) {
 void SContour::ClipEarInto(SMesh *m, int bp, double scaledEps) {
     int ap = WRAP(bp-1, l.n),
         cp = WRAP(bp+1, l.n);
-    
-    STriangle tr;
-    ZERO(&tr);
+
+    STriangle tr = {};
     tr.a = l.elem[ap].p;
     tr.b = l.elem[bp].p;
     tr.c = l.elem[cp].p;
@@ -425,12 +419,10 @@ void SSurface::MakeTriangulationGridInto(List<double> *l, double vs, double vf,
 }
 
 void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
-    SEdgeList orig;
-    ZERO(&orig);
+    SEdgeList orig = {};
     MakeEdgesInto(&orig);
 
-    SEdgeList holes;
-    ZERO(&holes);
+    SEdgeList holes = {};
 
     normal = Vector::From(0, 0, 1);
     FixContourDirections();
@@ -438,8 +430,8 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
     // Build a rectangular grid, with horizontal and vertical lines in the
     // uv plane. The spacing of these lines is adaptive, so calculate that.
     List<double> li, lj;
-    ZERO(&li);
-    ZERO(&lj);
+    li = {};
+    lj = {};
     double v = 0;
     li.Add(&v);
     srf->MakeTriangulationGridInto(&li, 0, 1, true);
@@ -475,8 +467,7 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
             }
 
             // Add the quad to our mesh
-            STriangle tr;
-            ZERO(&tr);
+            STriangle tr = {};
             tr.a = a;
             tr.b = b;
             tr.c = c;
@@ -494,8 +485,7 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
     }
 
     holes.CullExtraneousEdges();
-    SPolygon hp;
-    ZERO(&hp);
+    SPolygon hp = {};
     holes.AssemblePolygon(&hp, NULL, true);
 
     SContour *sc;

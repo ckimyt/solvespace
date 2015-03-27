@@ -87,7 +87,6 @@ inline double WRAP_SYMMETRIC(double v, double n) {
 inline double ffabs(double v) { return (v > 0) ? v : (-v); }
 
 #define SWAP(T, a, b) do { T temp = (a); (a) = (b); (b) = temp; } while(0)
-#define ZERO(v) memset((v), 0, sizeof(*(v)))
 #define CO(v) (v).x, (v).y, (v).z
 
 #define LENGTH_EPS      (1e-6)

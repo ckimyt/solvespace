@@ -196,7 +196,7 @@ void SSurface::AllPointsIntersectingUntrimmed(Vector a, Vector b,
     // Test if the line intersects our axis-aligned bounding box; if no, then
     // no possibility of an intersection
     if(LineEntirelyOutsideBbox(a, b, segment)) return;
- 
+
     if(*cnt > 2000) {
         dbp("!!! too many subdivisions (level=%d)!", *level);
         dbp("degm = %d degn = %d", degm, degn);
@@ -254,8 +254,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
     Vector ba = b.Minus(a);
     double bam = ba.Magnitude();
 
-    List<Inter> inters;
-    ZERO(&inters);
+    List<Inter> inters = {};
 
     // All the intersections between the line and the surface; either special
     // cases that we can quickly solve in closed form, or general numerical.
@@ -359,7 +358,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
         if(seg && (t > 1 - LENGTH_EPS/bam || t < LENGTH_EPS/bam)) {
             continue;
         }
-       
+
         // And that it lies inside our trim region
         Point2d dummy = { 0, 0 };
         int c = bsp->ClassifyPoint(puv, dummy, this);
@@ -423,11 +422,10 @@ int SShell::ClassifyRegion(Vector edge_n, Vector inter_surf_n,
 //-----------------------------------------------------------------------------
 bool SShell::ClassifyEdge(int *indir, int *outdir,
                           Vector ea, Vector eb,
-                          Vector p, 
+                          Vector p,
                           Vector edge_n_in, Vector edge_n_out, Vector surf_n)
 {
-    List<SInter> l;
-    ZERO(&l);
+    List<SInter> l = {};
 
     srand(0);
 
@@ -556,7 +554,7 @@ bool SShell::ClassifyEdge(int *indir, int *outdir,
 
         AllPointsIntersecting(
             p.Minus(ray), p.Plus(ray), &l, false, true, false);
-        
+
         // no intersections means it's outside
         *indir  = OUTSIDE;
         *outdir = OUTSIDE;
