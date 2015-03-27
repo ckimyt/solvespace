@@ -95,7 +95,7 @@ void Group::MenuGroup(int id) {
                 vt = vt.WithMagnitude(1);
 
                 if(fabs(SS.GW.projUp.Dot(vt)) < fabs(SS.GW.projUp.Dot(ut))) {
-                    SWAP(Vector, ut, vt);
+                    swap(ut, vt);
                     g.predef.swapUV = true;
                 }
                 if(SS.GW.projRight.Dot(ut) < 0) g.predef.negateU = true;
@@ -114,7 +114,7 @@ void Group::MenuGroup(int id) {
 
                 // Choose workplane orientation based on the current point of view.
                 if(fabs(SS.GW.projUp.Dot(vt)) < fabs(SS.GW.projUp.Dot(ut))) {
-                    SWAP(Vector, ut, vt);
+                    swap(ut, vt);
                     g.predef.swapUV = true;
                 }
                 if(SS.GW.projRight.Dot(ut) < 0) g.predef.negateU = true;
@@ -336,7 +336,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
                 Vector n = u.Cross(v);
                 v = (n.Cross(u)).WithMagnitude(1);
 
-                if(predef.swapUV) SWAP(Vector, u, v);
+                if(predef.swapUV) swap(u, v);
                 if(predef.negateU) u = u.ScaledBy(-1);
                 if(predef.negateV) v = v.ScaledBy(-1);
                 q = Quaternion::From(u, v);
@@ -352,7 +352,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
                 Vector u = q.RotationU();
                 Vector v = q.RotationV();
 
-                if(predef.swapUV) SWAP(Vector, u, v);
+                if(predef.swapUV) swap(u, v);
                 if(predef.negateU) u = u.ScaledBy(-1);
                 if(predef.negateV) v = v.ScaledBy(-1);
                 q = Quaternion::From(u, v);
