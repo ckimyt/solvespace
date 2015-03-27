@@ -91,7 +91,7 @@ void Style::CreateDefaultStyle(hStyle h) {
         ns.name.strcpy("new-custom-style");
     }
 
-    SK.style.Add(&ns);
+    SK.style.Add(ns);
 }
 
 void Style::LoadFactoryDefaults(void) {
@@ -437,8 +437,7 @@ void TextWindow::ShowListOfStyles(void) {
     Printf(true, "%Ft color  style-name");
 
     bool darkbg = false;
-    Style *s;
-    for(s = SK.style.First(); s; s = SK.style.NextAfter(s)) {
+    for(Style *s : SK.style) {
         Printf(false, "%Bp  %Bz   %Bp   %Fl%Ll%f%D%s%E",
             darkbg ? 'd' : 'a',
             &s->color,
@@ -705,7 +704,7 @@ bool TextWindow::EditControlDoneForStyles(const char *str) {
             break;
 
         case EDIT_BACKGROUND_IMG_SCALE: {
-            Expr *e = Expr::From(str, true);
+            ExprRef e = Expr::From(str, true);
             if(e) {
                 double ev = e->Eval();
                 if(ev < 0.001 || isnan(ev)) {

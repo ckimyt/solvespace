@@ -80,7 +80,7 @@ bool EntityBase::IsCircle(void) {
     return (type == CIRCLE) || (type == ARC_OF_CIRCLE);
 }
 
-Expr *EntityBase::CircleGetRadiusExpr(void) {
+ExprRef EntityBase::CircleGetRadiusExpr(void) {
     if(type == CIRCLE) {
         return SK.GetEntity(distance)->DistanceGetExpr();
     } else if(type == ARC_OF_CIRCLE) {
@@ -160,7 +160,7 @@ Vector EntityBase::WorkplaneGetOffset(void) {
     return SK.GetEntity(point[0])->PointGetNum();
 }
 
-void EntityBase::WorkplaneGetPlaneExprs(ExprVector *n, Expr **dn) {
+void EntityBase::WorkplaneGetPlaneExprs(ExprVector *n, ExprRef *dn) {
     if(type == WORKPLANE) {
         *n = Normal()->NormalExprsN();
 
@@ -185,7 +185,7 @@ double EntityBase::DistanceGetNum(void) {
         return numDistance;
     } else oops();
 }
-Expr *EntityBase::DistanceGetExpr(void) {
+ExprRef EntityBase::DistanceGetExpr(void) {
     if(type == DISTANCE) {
         return Expr::From(param[0]);
     } else if(type == DISTANCE_N_COPY) {
@@ -514,7 +514,7 @@ ExprVector EntityBase::PointGetExprs(void) {
     return r;
 }
 
-void EntityBase::PointGetExprsInWorkplane(hEntity wrkpl, Expr **u, Expr **v) {
+void EntityBase::PointGetExprsInWorkplane(hEntity wrkpl, ExprRef *u, ExprRef *v) {
     if(type == POINT_IN_2D && workplane.v == wrkpl.v) {
         // They want our coordinates in the form that we've written them,
         // very nice.
@@ -559,9 +559,9 @@ Quaternion EntityBase::GetAxisAngleQuaternion(int param0) {
 ExprQuaternion EntityBase::GetAxisAngleQuaternionExprs(int param0) {
     ExprQuaternion q;
 
-    Expr *theta = Expr::From(timesApplied)->Times(
+    ExprRef theta = Expr::From(timesApplied)->Times(
                   Expr::From(param[param0+0]));
-    Expr *c = theta->Cos(), *s = theta->Sin();
+    ExprRef c = theta->Cos(), s = theta->Sin();
     q.w = c;
     q.vx = s->Times(Expr::From(param[param0+1]));
     q.vy = s->Times(Expr::From(param[param0+2]));
@@ -728,11 +728,11 @@ Vector EntityBase::EndpointFinish() {
     }
 }
 
-void EntityBase::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) {
+void EntityBase::AddEq(IdList<Equation,hEquation> *l, ExprRef expr, int index) {
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
-    l->Add(&eq);
+    l->Add(eq);
 }
 
 void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) {
@@ -751,22 +751,20 @@ void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) {
             // If the two endpoints of the arc are constrained coincident
             // (to make a complete circle), then our distance constraint
             // would be redundant and therefore overconstrain things.
-            int i;
-            for(i = 0; i < SK.constraint.n; i++) {
-                ConstraintBase *c = &(SK.constraint.elem[i]);
-                if(c->group.v != group.v) continue;
-                if(c->type != Constraint::POINTS_COINCIDENT) continue;
+            if(std::none_of(SK.constraint.begin(), SK.constraint.end(),
+                    [this](const ConstraintBase *c) {
+                        if(c->group.v != group.v) return false;
+                        if(c->type != Constraint::POINTS_COINCIDENT) return false;
 
-                if((c->ptA.v == point[1].v && c->ptB.v == point[2].v) ||
-                   (c->ptA.v == point[2].v && c->ptB.v == point[1].v))
-                {
-                    break;
-                }
-            }
-            if(i < SK.constraint.n) break;
+                        if((c->ptA.v == point[1].v && c->ptB.v == point[2].v) ||
+                           (c->ptA.v == point[2].v && c->ptB.v == point[1].v))
+                            return true;
+                        return false;
+                    }))
+                break;
 
-            Expr *ra = Constraint::Distance(workplane, point[0], point[1]);
-            Expr *rb = Constraint::Distance(workplane, point[0], point[2]);
+            ExprRef ra = Constraint::Distance(workplane, point[0], point[1]);
+            ExprRef rb = Constraint::Distance(workplane, point[0], point[2]);
             AddEq(l, ra->Minus(rb), 0);
             break;
         }

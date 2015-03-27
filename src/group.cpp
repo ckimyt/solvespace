@@ -41,7 +41,7 @@ void Group::AddParam(IdList<Param,hParam> *param, hParam hp, double v) {
     pa.h = hp;
     pa.val = v;
 
-    param->Add(&pa);
+    param->Add(pa);
 }
 
 bool Group::IsVisible(void) {
@@ -225,7 +225,7 @@ void Group::MenuGroup(int id) {
     SS.GW.ClearSelection();
     SS.UndoRemember();
 
-    SK.group.AddAndAssignId(&g);
+    SK.group.AddAndAssignId(g);
     Group *gg = SK.GetGroup(g.h);
 
     if(gg->type == IMPORTED) {
@@ -331,14 +331,14 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             normal.point[0] = h.entity(2);
             normal.group = h;
             normal.h = h.entity(1);
-            entity->Add(&normal);
+            entity->Add(normal);
 
             Entity point = {};
             point.type = Entity::POINT_N_COPY;
             point.numPoint = SK.GetEntity(predef.origin)->PointGetNum();
             point.group = h;
             point.h = h.entity(2);
-            entity->Add(&point);
+            entity->Add(point);
 
             Entity wp = {};
             wp.type = Entity::WORKPLANE;
@@ -346,7 +346,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             wp.point[0] = point.h;
             wp.group = h;
             wp.h = h.entity(0);
-            entity->Add(&wp);
+            entity->Add(wp);
             break;
         }
 
@@ -364,8 +364,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             // Get some arbitrary point in the sketch, that will be used
             // as a reference when defining top and bottom faces.
             hEntity pt = { 0 };
-            for(i = 0; i < entity->n; i++) {
-                Entity *e = &(entity->elem[i]);
+            for(Entity *e : *entity) {
                 if(e->group.v != opA.v) continue;
 
                 if(e->IsPoint()) pt = e->h;
@@ -406,8 +405,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             }
 
             for(a = a0; a < n; a++) {
-                for(i = 0; i < entity->n; i++) {
-                    Entity *e = &(entity->elem[i]);
+                for(Entity *e : *entity) {
                     if(e->group.v != opA.v) continue;
 
                     e->CalculateNumerical(false);
@@ -438,8 +436,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             }
 
             for(a = a0; a < n; a++) {
-                for(i = 0; i < entity->n; i++) {
-                    Entity *e = &(entity->elem[i]);
+                for(Entity *e : *entity) {
                     if(e->group.v != opA.v) continue;
 
                     e->CalculateNumerical(false);
@@ -464,8 +461,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             AddParam(param, h.param(5), 0);
             AddParam(param, h.param(6), 0);
 
-            for(i = 0; i < impEntity.n; i++) {
-                Entity *ie = &(impEntity.elem[i]);
+            for(Entity *ie : impEntity) {
                 CopyEntity(entity, ie, 0, 0,
                     h.param(0), h.param(1), h.param(2),
                     h.param(3), h.param(4), h.param(5), h.param(6),
@@ -477,11 +473,11 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
     }
 }
 
-void Group::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) {
+void Group::AddEq(IdList<Equation,hEquation> *l, ExprRef expr, int index) {
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
-    l->Add(&eq);
+    l->Add(eq);
 }
 
 void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
@@ -542,15 +538,14 @@ hEntity Group::Remap(hEntity in, int copyNumber) {
     // A hash table is used to accelerate the search
     int hash = ((unsigned)(in.v*61 + copyNumber)) % REMAP_PRIME;
     int i = remapCache[hash];
-    if(i >= 0 && i < remap.n) {
+    if(i >= 0 && i < remap.Size()) {
         EntityMap *em = &(remap.elem[i]);
         if(em->input.v == in.v && em->copyNumber == copyNumber) {
             return h.entity(em->h.v);
         }
     }
     // but if we don't find it in the hash table, then linear search
-    for(i = 0; i < remap.n; i++) {
-        EntityMap *em = &(remap.elem[i]);
+    for(EntityMap *em : remap) {
         if(em->input.v == in.v && em->copyNumber == copyNumber) {
             // We already have a mapping for this entity.
             remapCache[hash] = i;
@@ -561,7 +556,7 @@ hEntity Group::Remap(hEntity in, int copyNumber) {
     EntityMap em;
     em.input = in;
     em.copyNumber = copyNumber;
-    remap.AddAndAssignId(&em);
+    remap.AddAndAssignId(em);
     return h.entity(em.h.v);
 }
 
@@ -578,7 +573,7 @@ void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
         en.style = ep->style;
         en.h = Remap(ep->h, REMAP_PT_TO_LINE);
         en.type = Entity::LINE_SEGMENT;
-        el->Add(&en);
+        el->Add(en);
     } else if(ep->type == Entity::LINE_SEGMENT) {
         // A line gets extruded to form a plane face; an endpoint of the
         // original line is a point in the plane, and the line is in the plane.
@@ -597,7 +592,7 @@ void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
         en.style = ep->style;
         en.h = Remap(ep->h, REMAP_LINE_TO_FACE);
         en.type = Entity::FACE_XPROD;
-        el->Add(&en);
+        el->Add(en);
     }
 }
 
@@ -614,11 +609,11 @@ void Group::MakeExtrusionTopBottomFaces(IdList<Entity,hEntity> *el, hEntity pt)
     en.numNormal = Quaternion::From(0, n.x, n.y, n.z);
     en.point[0] = Remap(pt, REMAP_TOP);
     en.h = Remap(Entity::NO_ENTITY, REMAP_TOP);
-    el->Add(&en);
+    el->Add(en);
 
     en.point[0] = Remap(pt, REMAP_BOTTOM);
     en.h = Remap(Entity::NO_ENTITY, REMAP_BOTTOM);
-    el->Add(&en);
+    el->Add(en);
 }
 
 void Group::CopyEntity(IdList<Entity,hEntity> *el,
@@ -749,6 +744,6 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
     // entity, then we also want to hide it.
     en.forceHidden = (!ep->actVisible) || ep->forceHidden;
 
-    el->Add(&en);
+    el->Add(en);
 }
 

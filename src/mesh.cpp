@@ -23,15 +23,17 @@ void SMesh::AddTriangle(STriMeta meta, Vector n, Vector a, Vector b, Vector c) {
         AddTriangle(meta, c, b, a);
     }
 }
+
 void SMesh::AddTriangle(STriMeta meta, Vector a, Vector b, Vector c) {
     STriangle t = {};
     t.meta = meta;
     t.a = a;
     t.b = b;
     t.c = c;
-    AddTriangle(&t);
+    AddTriangle(t);
 }
-void SMesh::AddTriangle(STriangle *st) {
+
+void SMesh::AddTriangle(STriangle &st) {
     if(st->meta.alpha != 1.0f) isTransparent = true;
     l.Add(st);
 }
@@ -49,8 +51,7 @@ void SMesh::GetBounding(Vector *vmax, Vector *vmin) {
     int i;
     *vmin = Vector::From( 1e12,  1e12,  1e12);
     *vmax = Vector::From(-1e12, -1e12, -1e12);
-    for(i = 0; i < l.n; i++) {
-        STriangle *st = &(l.elem[i]);
+    for(STriangle *st : l) {
         DoBounding(st->a, vmax, vmin);
         DoBounding(st->b, vmax, vmin);
         DoBounding(st->c, vmax, vmin);
@@ -67,9 +68,7 @@ void SMesh::MakeEdgesInPlaneInto(SEdgeList *sel, Vector n, double d) {
 
     // Delete all triangles in the mesh that do not lie in our export plane.
     m.l.ClearTags();
-    int i;
-    for(i = 0; i < m.l.n; i++) {
-        STriangle *tr = &(m.l.elem[i]);
+    for(STriangle *tr : m.l) {
 
         if((fabs(n.Dot(tr->a) - d) >= LENGTH_EPS) ||
            (fabs(n.Dot(tr->b) - d) >= LENGTH_EPS) ||
@@ -243,8 +242,7 @@ void SMesh::Simplify(int start) {
 void SMesh::AddAgainstBsp(SMesh *srcm, SBsp3 *bsp3) {
     int i;
 
-    for(i = 0; i < srcm->l.n; i++) {
-        STriangle *st = &(srcm->l.elem[i]);
+    for(STriangle &st : srcm->l) {
         int pn = l.n;
         atLeastOneDiscarded = false;
         bsp3->Insert(st, this);
@@ -615,8 +613,7 @@ void SKdNode::SnapToVertex(Vector v, SMesh *extras) {
 //-----------------------------------------------------------------------------
 void SKdNode::SnapToMesh(SMesh *m) {
     int i, j, k;
-    for(i = 0; i < m->l.n; i++) {
-        STriangle *tr = &(m->l.elem[i]);
+    for(STriangle &tr : m->l) {
         for(j = 0; j < 3; j++) {
             Vector v = ((j == 0) ? tr->a :
                        ((j == 1) ? tr->b :
@@ -907,8 +904,7 @@ void SKdNode::MakeCertainEdgesInto(SEdgeList *sel, int how,
 
     int cnt = 1234;
     int i, j;
-    for(i = 0; i < m.l.n; i++) {
-        STriangle *tr = &(m.l.elem[i]);
+    for(STriangle *tr : m.l) {
 
         for(j = 0; j < 3; j++) {
             Vector a = (j == 0) ? tr->a : ((j == 1)  ? tr->b : tr->c);

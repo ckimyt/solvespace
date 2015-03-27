@@ -223,8 +223,7 @@ void SBezierList::Clear(void) {
 }
 
 void SBezierList::ScaleSelfBy(double s) {
-    SBezier *sb;
-    for(sb = l.First(); sb; sb = l.NextAfter(sb)) {
+    for(SBezier *sb : l) {
         sb->ScaleSelfBy(s);
     }
 }
@@ -277,16 +276,14 @@ void SBezier::AllIntersectionsWith(SBezier *sbb, SPointList *spl) {
     seb = {};
     this->MakePwlInto(&sea);
     sbb ->MakePwlInto(&seb);
-    SEdge *se;
-    for(se = sea.l.First(); se; se = sea.l.NextAfter(se)) {
+    for(SEdge *se : sea.l) {
         // This isn't quite correct, since AnyEdgeCrossings doesn't count
         // the case where two pairs of line segments intersect at their
         // vertices. So this isn't robust, although that case isn't very
         // likely.
         seb.AnyEdgeCrossings(se->a, se->b, NULL, &splRaw);
     }
-    SPoint *sp;
-    for(sp = splRaw.l.First(); sp; sp = splRaw.l.NextAfter(sp)) {
+    for(SPoint *sp : splRaw.l) {
         Vector p = sp->p;
         if(PointOnThisAndCurve(sbb, &p)) {
             if(!spl->ContainsPoint(p)) spl->Add(p);
@@ -406,8 +403,7 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
     while(sbl->l.n > 0 && !hanging.Equals(start)) {
         int i;
         bool foundNext = false;
-        for(i = 0; i < sbl->l.n; i++) {
-            SBezier *test = &(sbl->l.elem[i]);
+        for(SBezier &test : sbl->l) {
 
             if((test->Finish()).Equals(hanging) && test->auxA == auxA) {
                 test->Reverse();
@@ -445,8 +441,7 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
 
 void SBezierLoop::Reverse(void) {
     l.Reverse();
-    SBezier *sb;
-    for(sb = l.First(); sb; sb = l.NextAfter(sb)) {
+    for(SBezier *sb : l) {
         // If we didn't reverse each curve, then the next curve in list would
         // share your start, not your finish.
         sb->Reverse();
@@ -456,15 +451,13 @@ void SBezierLoop::Reverse(void) {
 void SBezierLoop::GetBoundingProjd(Vector u, Vector orig,
                                    double *umin, double *umax)
 {
-    SBezier *sb;
-    for(sb = l.First(); sb; sb = l.NextAfter(sb)) {
+    for(SBezier *sb : l) {
         sb->GetBoundingProjd(u, orig, umin, umax);
     }
 }
 
 void SBezierLoop::MakePwlInto(SContour *sc, double chordTol) {
-    SBezier *sb;
-    for(sb = l.First(); sb; sb = l.NextAfter(sb)) {
+    for(SBezier *sb : l) {
         sb->MakePwlInto(sc, chordTol);
         // Avoid double points at join between Beziers; except that
         // first and last points should be identical.
@@ -508,14 +501,13 @@ SBezierLoopSet SBezierLoopSet::From(SBezierList *sbl, SPolygon *poly,
             // Record open loops in a separate list, if requested.
             *allClosed = false;
             if(openContours) {
-                SBezier *sb;
-                for(sb = loop.l.First(); sb; sb = loop.l.NextAfter(sb)) {
+                for(SBezier *sb : loop.l) {
                     openContours->l.Add(sb);
                 }
             }
             loop.Clear();
         } else {
-            ret.l.Add(&loop);
+            ret.l.Add(loop);
             poly->AddEmptyContour();
             loop.MakePwlInto(&(poly->l.elem[poly->l.n-1]), chordTol);
         }
@@ -535,8 +527,7 @@ SBezierLoopSet SBezierLoopSet::From(SBezierList *sbl, SPolygon *poly,
 void SBezierLoopSet::GetBoundingProjd(Vector u, Vector orig,
                                       double *umin, double *umax)
 {
-    SBezierLoop *sbl;
-    for(sbl = l.First(); sbl; sbl = l.NextAfter(sbl)) {
+    for(SBezierLoop *sbl : l) {
         sbl->GetBoundingProjd(u, orig, umin, umax);
     }
 }
@@ -546,8 +537,7 @@ void SBezierLoopSet::GetBoundingProjd(Vector u, Vector orig,
 // a polygon, one contour per loop.
 //-----------------------------------------------------------------------------
 void SBezierLoopSet::MakePwlInto(SPolygon *sp) {
-    SBezierLoop *sbl;
-    for(sbl = l.First(); sbl; sbl = l.NextAfter(sbl)) {
+    for(SBezierLoop *sbl : l) {
         sp->AddEmptyContour();
         sbl->MakePwlInto(&(sp->l.elem[sp->l.n - 1]));
     }
@@ -641,16 +631,14 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     bool loopsRemaining = true;
     while(loopsRemaining) {
         loopsRemaining = false;
-        for(i = 0; i < sbls.l.n; i++) {
-            SBezierLoop *loop = &(sbls.l.elem[i]);
+        for(SBezierLoop *loop : sbls.l) {
             if(loop->tag != OUTER_LOOP) continue;
 
             // Check if this contour contains any outer loops; if it does, then
             // we should do those "inner outer loops" first; otherwise we
             // will steal their holes, since their holes also lie inside this
             // contour.
-            for(j = 0; j < sbls.l.n; j++) {
-                SBezierLoop *outer = &(sbls.l.elem[j]);
+            for(SBezierLoop *outer : sbls.l) {
                 if(i == j) continue;
                 if(outer->tag != OUTER_LOOP) continue;
 
@@ -671,8 +659,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
             int auxA = 0;
             if(loop->l.n > 0) auxA = loop->l.elem[0].auxA;
 
-            for(j = 0; j < sbls.l.n; j++) {
-                SBezierLoop *inner = &(sbls.l.elem[j]);
+            for(SBezierLoop *inner : sbls.l) {
                 if(inner->tag != INNER_LOOP) continue;
                 if(inner->l.n < 1) continue;
                 if(inner->l.elem[0].auxA != auxA) continue;
@@ -686,7 +673,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
 
             outerAndInners.point  = srfuv->PointAt(0, 0);
             outerAndInners.normal = srfuv->NormalAt(0, 0);
-            l.Add(&outerAndInners);
+            l.Add(outerAndInners);
         }
     }
 
@@ -695,8 +682,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     // group stuff into closed paths for export when possible, so it's bad
     // to screw up on that stuff. So just add them onto the open curve list.
     // Very ugly, but better than losing curves.
-    for(i = 0; i < sbls.l.n; i++) {
-        SBezierLoop *loop = &(sbls.l.elem[i]);
+    for(SBezierLoop *loop : sbls.l) {
         if(loop->tag == USED_LOOP) continue;
 
         if(openContours) {
@@ -719,14 +705,13 @@ void SBezierLoopSetSet::AddOpenPath(SBezier *sb) {
     sbl.l.Add(sb);
 
     SBezierLoopSet sbls = {};
-    sbls.l.Add(&sbl);
+    sbls.l.Add(sbl);
 
-    l.Add(&sbls);
+    l.Add(sbls);
 }
 
 void SBezierLoopSetSet::Clear(void) {
-    SBezierLoopSet *sbls;
-    for(sbls = l.First(); sbls; sbls = l.NextAfter(sbls)) {
+    for(SBezierLoopSet *sbls : l) {
         sbls->Clear();
     }
     l.Clear();
@@ -748,7 +733,7 @@ SCurve SCurve::FromTransformationOf(SCurve *a,
         SCurvePt pp = *p;
         pp.p = (pp.p).ScaledBy(scale);
         pp.p = (q.Rotate(pp.p)).Plus(t);
-        ret.pts.Add(&pp);
+        ret.pts.Add(pp);
     }
     return ret;
 }

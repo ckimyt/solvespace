@@ -219,7 +219,7 @@ void SSurface::AllPointsIntersectingUntrimmed(Vector a, Vector b,
             // (which it ought to, since the surfaces should be coincident)
             double u, v;
             ClosestPointTo(p, &u, &v);
-            l->Add(&inter);
+            l->Add(inter);
         } else {
             // Might not converge if line is almost tangent to surface...
         }
@@ -273,7 +273,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
             Vector p = Vector::AtIntersectionOfPlaneAndLine(n, d, a, b, NULL);
             Inter inter;
             ClosestPointTo(p, &(inter.p.x), &(inter.p.y));
-            inters.Add(&inter);
+            inters.Add(inter);
         }
     } else if(IsCylinder(&axis, &center, &radius, &start, &finish)) {
         // This one can be solved in closed form too.
@@ -329,7 +329,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
 
             Inter inter;
             ClosestPointTo(p, &(inter.p.x), &(inter.p.y));
-            inters.Add(&inter);
+            inters.Add(inter);
         }
     } else {
         // General numerical solution by subdivision, fallback
@@ -373,7 +373,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
         si.pinter = puv;
         si.srf = this;
         si.onEdge = (c != SBspUv::INSIDE);
-        l->Add(&si);
+        l->Add(si);
     }
 
     inters.Clear();
@@ -383,8 +383,7 @@ void SShell::AllPointsIntersecting(Vector a, Vector b,
                                    List<SInter> *il,
                                    bool seg, bool trimmed, bool inclTangent)
 {
-    SSurface *ss;
-    for(ss = surface.First(); ss; ss = surface.NextAfter(ss)) {
+    for(SSurface *ss : surface) {
         ss->AllPointsIntersecting(a, b, il, seg, trimmed, inclTangent);
     }
 }
@@ -432,8 +431,7 @@ bool SShell::ClassifyEdge(int *indir, int *outdir,
     // First, check for edge-on-edge
     int edge_inters = 0;
     Vector inter_surf_n[2], inter_edge_n[2];
-    SSurface *srf;
-    for(srf = surface.First(); srf; srf = surface.NextAfter(srf)) {
+    for(SSurface *srf : surface) {
         if(srf->LineEntirelyOutsideBbox(ea, eb, true)) continue;
 
         SEdgeList *sel = &(srf->edges);
@@ -562,8 +560,7 @@ bool SShell::ClassifyEdge(int *indir, int *outdir,
         bool onEdge = false;
         edge_inters = 0;
 
-        SInter *si;
-        for(si = l.First(); si; si = l.NextAfter(si)) {
+        for(SInter *si : l) {
             double t = ((si->p).Minus(p)).DivPivoting(ray);
             if(t*ray.Magnitude() < -LENGTH_EPS) {
                 // wrong side, doesn't count

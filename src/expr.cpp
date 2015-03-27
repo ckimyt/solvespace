@@ -8,7 +8,7 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
-ExprVector ExprVector::From(Expr *x, Expr *y, Expr *z) {
+ExprVector ExprVector::From(ExprRef x, ExprRef y, ExprRef z) {
     ExprVector r = { x, y, z};
     return r;
 }
@@ -53,8 +53,8 @@ ExprVector ExprVector::Plus(ExprVector b) {
     return r;
 }
 
-Expr *ExprVector::Dot(ExprVector b) {
-    Expr *r;
+ExprRef ExprVector::Dot(ExprVector b) {
+    ExprRef r;
     r =         x->Times(b.x);
     r = r->Plus(y->Times(b.y));
     r = r->Plus(z->Times(b.z));
@@ -69,7 +69,7 @@ ExprVector ExprVector::Cross(ExprVector b) {
     return r;
 }
 
-ExprVector ExprVector::ScaledBy(Expr *s) {
+ExprVector ExprVector::ScaledBy(ExprRef s) {
     ExprVector r;
     r.x = x->Times(s);
     r.y = y->Times(s);
@@ -77,13 +77,13 @@ ExprVector ExprVector::ScaledBy(Expr *s) {
     return r;
 }
 
-ExprVector ExprVector::WithMagnitude(Expr *s) {
-    Expr *m = Magnitude();
+ExprVector ExprVector::WithMagnitude(ExprRef s) {
+    ExprRef m = Magnitude();
     return ScaledBy(s->Div(m));
 }
 
-Expr *ExprVector::Magnitude(void) {
-    Expr *r;
+ExprRef ExprVector::Magnitude(void) {
+    ExprRef r;
     r =         x->Square();
     r = r->Plus(y->Square());
     r = r->Plus(z->Square());
@@ -107,7 +107,7 @@ ExprQuaternion ExprQuaternion::From(hParam w, hParam vx, hParam vy, hParam vz) {
     return q;
 }
 
-ExprQuaternion ExprQuaternion::From(Expr *w, Expr *vx, Expr *vy, Expr *vz)
+ExprQuaternion ExprQuaternion::From(ExprRef w, ExprRef vx, ExprRef vy, ExprRef vz)
 {
     ExprQuaternion q;
     q.w = w;
@@ -128,7 +128,7 @@ ExprQuaternion ExprQuaternion::From(Quaternion qn) {
 
 ExprVector ExprQuaternion::RotationU(void) {
     ExprVector u;
-    Expr *two = Expr::From(2);
+    ExprRef two = Expr::From(2);
 
     u.x = w->Square();
     u.x = (u.x)->Plus(vx->Square());
@@ -146,7 +146,7 @@ ExprVector ExprQuaternion::RotationU(void) {
 
 ExprVector ExprQuaternion::RotationV(void) {
     ExprVector v;
-    Expr *two = Expr::From(2);
+    ExprRef two = Expr::From(2);
 
     v.x = two->Times(vx->Times(vy));
     v.x = (v.x)->Minus(two->Times(w->Times(vz)));
@@ -164,7 +164,7 @@ ExprVector ExprQuaternion::RotationV(void) {
 
 ExprVector ExprQuaternion::RotationN(void) {
     ExprVector n;
-    Expr *two = Expr::From(2);
+    ExprRef two = Expr::From(2);
 
     n.x =              two->Times( w->Times(vy));
     n.x = (n.x)->Plus (two->Times(vx->Times(vz)));
@@ -188,7 +188,7 @@ ExprVector ExprQuaternion::Rotate(ExprVector p) {
 }
 
 ExprQuaternion ExprQuaternion::Times(ExprQuaternion b) {
-    Expr *sa = w, *sb = b.w;
+    ExprRef sa = w, sb = b.w;
     ExprVector va = { vx, vy, vz };
     ExprVector vb = { b.vx, b.vy, b.vz };
 
@@ -203,7 +203,7 @@ ExprQuaternion ExprQuaternion::Times(ExprQuaternion b) {
     return r;
 }
 
-Expr *ExprQuaternion::Magnitude(void) {
+ExprRef ExprQuaternion::Magnitude(void) {
     return ((w ->Square())->Plus(
             (vx->Square())->Plus(
             (vy->Square())->Plus(
@@ -211,24 +211,24 @@ Expr *ExprQuaternion::Magnitude(void) {
 }
 
 
-Expr *Expr::From(hParam p) {
-    Expr *r = AllocExpr();
+ExprRef Expr::From(hParam p) {
+    ExprRef r = std::make_shared<Expr>();
     r->op = PARAM;
     r->x.parh = p;
     return r;
 }
 
-Expr *Expr::From(double v) {
-    Expr *r = AllocExpr();
+ExprRef Expr::From(double v) {
+    ExprRef r = std::make_shared<Expr>();
     r->op = CONSTANT;
     r->x.v = v;
     return r;
 }
 
-Expr *Expr::AnyOp(int newOp, Expr *b) {
-    Expr *r = AllocExpr();
+ExprRef Expr::AnyOp(int newOp, ExprRef b) {
+    ExprRef r = std::make_shared<Expr>();
     r->op = newOp;
-    r->a = this;
+    r->a = shared_from_this();
     r->b = b;
     return r;
 }
@@ -268,8 +268,8 @@ int Expr::Nodes(void) {
     }
 }
 
-Expr *Expr::DeepCopy(void) {
-    Expr *n = AllocExpr();
+ExprRef Expr::DeepCopy(void) {
+    ExprRef n = std::make_shared<Expr>();
     *n = *this;
     n->marker = 0;
     int c = n->Children();
@@ -278,10 +278,10 @@ Expr *Expr::DeepCopy(void) {
     return n;
 }
 
-Expr *Expr::DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
+ExprRef Expr::DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
     IdList<Param,hParam> *thenTry)
 {
-    Expr *n = AllocExpr();
+    ExprRef n = std::make_shared<Expr>();
     if(op == PARAM) {
         // A param that is referenced by its hParam gets rewritten to go
         // straight in to the parameter table with a pointer, or simply
@@ -329,8 +329,8 @@ double Expr::Eval(void) {
     }
 }
 
-Expr *Expr::PartialWrt(hParam p) {
-    Expr *da, *db;
+ExprRef Expr::PartialWrt(hParam p) {
+    ExprRef da, db;
 
     switch(op) {
         case PARAM_PTR: return From(p.v == x.parp->h.v ? 1 : 0);
@@ -396,8 +396,8 @@ bool Expr::DependsOn(hParam p) {
 bool Expr::Tol(double a, double b) {
     return fabs(a - b) < 0.001;
 }
-Expr *Expr::FoldConstants(void) {
-    Expr *n = AllocExpr();
+ExprRef Expr::FoldConstants(void) {
+    ExprRef n = std::make_shared<Expr>();
     *n = *this;
 
     int c = Children();
@@ -525,8 +525,6 @@ void Expr::App(const char *s, ...) {
     vsprintf(StringBuffer+strlen(StringBuffer), s, f);
 }
 const char *Expr::Print(void) {
-    if(!this) return "0";
-
     StringBuffer[0] = '\0';
     PrintW();
     return StringBuffer;
@@ -573,36 +571,36 @@ p:
 //-----------------------------------------------------------------------------
 
 #define MAX_UNPARSED 1024
-static Expr *Unparsed[MAX_UNPARSED];
+static ExprRef Unparsed[MAX_UNPARSED];
 static int UnparsedCnt, UnparsedP;
 
-static Expr *Operands[MAX_UNPARSED];
+static ExprRef Operands[MAX_UNPARSED];
 static int OperandsP;
 
-static Expr *Operators[MAX_UNPARSED];
+static ExprRef Operators[MAX_UNPARSED];
 static int OperatorsP;
 
-void Expr::PushOperator(Expr *e) {
+void Expr::PushOperator(ExprRef e) {
     if(OperatorsP >= MAX_UNPARSED) throw "operator stack full!";
     Operators[OperatorsP++] = e;
 }
-Expr *Expr::TopOperator(void) {
+ExprRef Expr::TopOperator(void) {
     if(OperatorsP <= 0) throw "operator stack empty (get top)";
     return Operators[OperatorsP-1];
 }
-Expr *Expr::PopOperator(void) {
+ExprRef Expr::PopOperator(void) {
     if(OperatorsP <= 0) throw "operator stack empty (pop)";
     return Operators[--OperatorsP];
 }
-void Expr::PushOperand(Expr *e) {
+void Expr::PushOperand(ExprRef e) {
     if(OperandsP >= MAX_UNPARSED) throw "operand stack full";
     Operands[OperandsP++] = e;
 }
-Expr *Expr::PopOperand(void) {
+ExprRef Expr::PopOperand(void) {
     if(OperandsP <= 0) throw "operand stack empty";
     return Operands[--OperandsP];
 }
-Expr *Expr::Next(void) {
+ExprRef Expr::Next(void) {
     if(UnparsedP >= UnparsedCnt) return NULL;
     return Unparsed[UnparsedP];
 }
@@ -611,7 +609,7 @@ void Expr::Consume(void) {
     UnparsedP++;
 }
 
-int Expr::Precedence(Expr *e) {
+int Expr::Precedence(ExprRef e) {
     if(e->op == ALL_RESOLVED) return -1; // never want to reduce this marker
     if(e->op != BINARY_OP && e->op != UNARY_OP) oops();
 
@@ -632,10 +630,10 @@ int Expr::Precedence(Expr *e) {
 }
 
 void Expr::Reduce(void) {
-    Expr *a, *b;
+    ExprRef a, b;
 
-    Expr *op = PopOperator();
-    Expr *n;
+    ExprRef op = PopOperator();
+    ExprRef n;
     int o;
     switch(op->x.c) {
         case '+': o = PLUS;  goto c;
@@ -658,7 +656,7 @@ c:
     PushOperand(n);
 }
 
-void Expr::ReduceAndPush(Expr *n) {
+void Expr::ReduceAndPush(ExprRef n) {
     while(Precedence(n) <= Precedence(TopOperator())) {
         Reduce();
     }
@@ -666,12 +664,12 @@ void Expr::ReduceAndPush(Expr *n) {
 }
 
 void Expr::Parse(void) {
-    Expr *e = AllocExpr();
+    ExprRef e = std::make_shared<Expr>();
     e->op = ALL_RESOLVED;
     PushOperator(e);
 
     for(;;) {
-        Expr *n = Next();
+        ExprRef n = Next();
         if(!n) throw "end of expression unexpected";
 
         if(n->op == CONSTANT) {
@@ -728,7 +726,7 @@ void Expr::Lex(const char *in) {
                 in++;
             }
             number[len++] = '\0';
-            Expr *e = AllocExpr();
+            ExprRef e = std::make_shared<Expr>();
             e->op = CONSTANT;
             e->x.v = atof(number);
             Unparsed[UnparsedCnt++] = e;
@@ -741,7 +739,7 @@ void Expr::Lex(const char *in) {
             }
             name[len++] = '\0';
 
-            Expr *e = AllocExpr();
+            ExprRef e = std::make_shared<Expr>();
             if(strcmp(name, "sqrt")==0) {
                 e->op = UNARY_OP;
                 e->x.c = 'q';
@@ -756,7 +754,7 @@ void Expr::Lex(const char *in) {
             }
             Unparsed[UnparsedCnt++] = e;
         } else if(strchr("+-*/()", c)) {
-            Expr *e = AllocExpr();
+            ExprRef e = std::make_shared<Expr>();
             e->op = (c == '(' || c == ')') ? PAREN : BINARY_OP;
             e->x.c = c;
             Unparsed[UnparsedCnt++] = e;
@@ -771,13 +769,13 @@ void Expr::Lex(const char *in) {
     }
 }
 
-Expr *Expr::From(const char *in, bool popUpError) {
+ExprRef Expr::From(const char *in, bool popUpError) {
     UnparsedCnt = 0;
     UnparsedP = 0;
     OperandsP = 0;
     OperatorsP = 0;
 
-    Expr *r;
+    ExprRef r;
     try {
         Lex(in);
         Parse();

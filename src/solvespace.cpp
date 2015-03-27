@@ -237,7 +237,7 @@ char *SolveSpaceUI::MmToString(double v) {
     }
     return s;
 }
-double SolveSpaceUI::ExprToMm(Expr *e) {
+double SolveSpaceUI::ExprToMm(ExprRef e) {
     return (e->Eval()) * MmPerUnit();
 }
 double SolveSpaceUI::StringToMm(const char *str) {

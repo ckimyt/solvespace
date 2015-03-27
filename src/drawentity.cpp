@@ -57,8 +57,7 @@ void Entity::DrawAll(void) {
         ssglColorRGB(Style::Color(Style::DATUM));
         ssglDepthRangeOffset(6);
         glBegin(GL_QUADS);
-        for(i = 0; i < SK.entity.n; i++) {
-            Entity *e = &(SK.entity.elem[i]);
+        for(Entity *e : SK.entity) {
             if(!e->IsPoint()) continue;
             if(!(SK.GetGroup(e->group)->IsVisible())) continue;
             if(e->forceHidden) continue;
@@ -101,8 +100,7 @@ void Entity::DrawAll(void) {
         ssglDepthRangeOffset(0);
     }
 
-    for(i = 0; i < SK.entity.n; i++) {
-        Entity *e = &(SK.entity.elem[i]);
+    for(Entity *e : SK.entity) {
         if(e->IsPoint())
         {
             continue; // already handled
@@ -128,12 +126,11 @@ void Entity::GenerateEdges(SEdgeList *el, bool includingConstruction) {
     GenerateBezierCurves(&sbl);
 
     int i, j;
-    for(i = 0; i < sbl.l.n; i++) {
-        SBezier *sb = &(sbl.l.elem[i]);
+    for(SBezier &sb : sbl.l) {
 
         List<Vector> lv = {};
-        sb->MakePwlInto(&lv);
-        for(j = 1; j < lv.n; j++) {
+        sb.MakePwlInto(lv);
+        for(j = 1; j < lv.Size(); j++) {
             el->AddEdge(lv.elem[j-1], lv.elem[j], style.v);
         }
         lv.Clear();
@@ -352,21 +349,21 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) {
             p2 = p3.Minus(Vector::From(Xx[i], Xy[i], Xz[i]));
         }
         SBezier sb = SBezier::From(p0, p1, p2, p3);
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
     }
 }
 
 void Entity::GenerateBezierCurves(SBezierList *sbl) {
     SBezier sb;
 
-    int i = sbl->l.n;
+    int i = sbl->l.Size();
 
     switch(type) {
         case LINE_SEGMENT: {
             Vector a = SK.GetEntity(point[0])->PointGetNum();
             Vector b = SK.GetEntity(point[1])->PointGetNum();
             sb = SBezier::From(a, b);
-            sbl->l.Add(&sb);
+            sbl->l.Add(sb);
             break;
         }
         case CUBIC:
@@ -434,7 +431,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) {
 
                 SBezier sb = SBezier::From(p0, p1, p2);
                 sb.weight[1] = cos(dtheta/2);
-                sbl->l.Add(&sb);
+                sbl->l.Add(sb);
             }
             break;
         }
@@ -456,7 +453,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) {
     }
 
     // Record our style for all of the Beziers that we just created.
-    for(; i < sbl->l.n; i++) {
+    for(; i < sbl->l.Size(); i++) {
         sbl->l.elem[i].auxA = style.v;
     }
 }
@@ -644,11 +641,9 @@ void Entity::DrawOrGetDistance(void) {
     // everything, then piecewise linearize them, and display those.
     SEdgeList sel = {};
     GenerateEdges(&sel, true);
-    int i;
-    for(i = 0; i < sel.l.n; i++) {
-        SEdge *se = &(sel.l.elem[i]);
-        LineDrawOrGetDistance(se->a, se->b, true);
-    }
+    for(SEdge &se : sel.l)
+        LineDrawOrGetDistance(se.a, se.b, true);
+
     sel.Clear();
 }
 

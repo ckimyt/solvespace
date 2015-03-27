@@ -244,7 +244,7 @@ void SBezier::MakePwlInto(List<SCurvePt> *l, double chordTol) {
         scpt.tag    = 0;
         scpt.p      = lv.elem[i];
         scpt.vertex = (i == 0) || (i == (lv.n - 1));
-        l->Add(&scpt);
+        l->Add(scpt);
     }
     lv.Clear();
 }
@@ -262,9 +262,9 @@ void SBezier::MakePwlInto(List<Vector> *l, double chordTol) {
         // Use the default chord tolerance.
         chordTol = SS.ChordTolMm();
     }
-    l->Add(&(ctrl[0]));
+    l->Add((ctrl[0]));
     if(deg == 1) {
-        l->Add(&(ctrl[1]));
+        l->Add((ctrl[1]));
     } else {
         // Never do fewer than one intermediate point; people seem to get
         // unhappy when their circles turn into squares, but maybe less
@@ -292,7 +292,7 @@ void SBezier::MakePwlWorker(List<Vector> *l, double ta, double tb,
     double step = 1.0/SS.maxSegments;
     if((tb - ta) < step || d < chordTol) {
         // A previous call has already added the beginning of our interval.
-        l->Add(&pb);
+        l->Add(pb);
     } else {
         double tm = (ta + tb) / 2;
         MakePwlWorker(l, ta, tm, chordTol);

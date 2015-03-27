@@ -250,16 +250,16 @@ static void Stipple(bool forSel)
     }
 }
 
-static void StippleTriangle(STriangle *tr, bool s, RgbColor rgb)
+static void StippleTriangle(STriangle &tr, bool s, RgbColor rgb)
 {
     glEnd();
     glDisable(GL_LIGHTING);
     ssglColorRGB(rgb);
     Stipple(s);
     glBegin(GL_TRIANGLES);
-        ssglVertex3v(tr->a);
-        ssglVertex3v(tr->b);
-        ssglVertex3v(tr->c);
+        ssglVertex3v(tr.a);
+        ssglVertex3v(tr.b);
+        ssglVertex3v(tr.c);
     glEnd();
     glEnable(GL_LIGHTING);
     glDisable(GL_POLYGON_STIPPLE);
@@ -267,7 +267,7 @@ static void StippleTriangle(STriangle *tr, bool s, RgbColor rgb)
 }
 
 void ssglFillMesh(RgbColor specColor, double specAlpha,
-                  SMesh *m, uint32_t h, uint32_t s1, uint32_t s2)
+                  SMesh &m, uint32_t h, uint32_t s1, uint32_t s2)
 {
     RgbColor rgbHovered  = Style::Color(Style::HOVERED),
              rgbSelected = Style::Color(Style::SELECTED);
@@ -276,14 +276,12 @@ void ssglFillMesh(RgbColor specColor, double specAlpha,
     RgbColor prevColor = NULL_COLOR;
     GLfloat prevAlpha = -1.0f;
     glBegin(GL_TRIANGLES);
-    for(int i = 0; i < m->l.n; i++) {
-        STriangle *tr = &(m->l.elem[i]);
-
+    for(STriangle &tr : m.l) {
         RgbColor color;
         GLfloat alpha;
         if(specColor.UseDefault()) {
-            color = tr->meta.color;
-            alpha = tr->meta.alpha;
+            color = tr.meta.color;
+            alpha = tr.meta.alpha;
         } else {
             color = specColor;
             alpha = specAlpha;
@@ -297,31 +295,31 @@ void ssglFillMesh(RgbColor specColor, double specAlpha,
             glBegin(GL_TRIANGLES);
         }
 
-        if(tr->an.EqualsExactly(Vector::From(0, 0, 0))) {
+        if(tr.an.EqualsExactly(Vector::From(0, 0, 0))) {
             // Compute the normal from the vertices
-            Vector n = tr->Normal();
+            Vector n = tr.Normal();
             glNormal3d(n.x, n.y, n.z);
-            ssglVertex3v(tr->a);
-            ssglVertex3v(tr->b);
-            ssglVertex3v(tr->c);
+            ssglVertex3v(tr.a);
+            ssglVertex3v(tr.b);
+            ssglVertex3v(tr.c);
         } else {
             // Use the exact normals that are specified
-            glNormal3d((tr->an).x, (tr->an).y, (tr->an).z);
-            ssglVertex3v(tr->a);
+            glNormal3d((tr.an).x, (tr.an).y, (tr.an).z);
+            ssglVertex3v(tr.a);
 
-            glNormal3d((tr->bn).x, (tr->bn).y, (tr->bn).z);
-            ssglVertex3v(tr->b);
+            glNormal3d((tr.bn).x, (tr.bn).y, (tr.bn).z);
+            ssglVertex3v(tr.b);
 
-            glNormal3d((tr->cn).x, (tr->cn).y, (tr->cn).z);
-            ssglVertex3v(tr->c);
+            glNormal3d((tr.cn).x, (tr.cn).y, (tr.cn).z);
+            ssglVertex3v(tr.c);
         }
 
-        if((s1 != 0 && tr->meta.face == s1) ||
-           (s2 != 0 && tr->meta.face == s2))
+        if((s1 != 0 && tr.meta.face == s1) ||
+           (s2 != 0 && tr.meta.face == s2))
         {
             StippleTriangle(tr, true, rgbSelected);
         }
-        if(h != 0 && tr->meta.face == h) {
+        if(h != 0 && tr.meta.face == h) {
             StippleTriangle(tr, false, rgbHovered);
         }
     }
@@ -354,45 +352,40 @@ static void SSGL_CALLBACK Combine(double coords[3], void *vertexData[4],
 
     *outData = n;
 }
-void ssglTesselatePolygon(GLUtesselator *gt, SPolygon *p)
+void ssglTesselatePolygon(GLUtesselator *gt, SPolygon &p)
 {
-    int i, j;
-
     gluTessCallback(gt, GLU_TESS_COMBINE, (ssglCallbackFptr *)Combine);
     gluTessProperty(gt, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD);
 
-    Vector normal = p->normal;
+    Vector normal = p.normal;
     glNormal3d(normal.x, normal.y, normal.z);
     gluTessNormal(gt, normal.x, normal.y, normal.z);
 
     gluTessBeginPolygon(gt, NULL);
-    for(i = 0; i < p->l.n; i++) {
-        SContour *sc = &(p->l.elem[i]);
+    for(SContour &sc : p.l) {
         gluTessBeginContour(gt);
-        for(j = 0; j < (sc->l.n-1); j++) {
-            SPoint *sp = &(sc->l.elem[j]);
+        for(int j = 0; j < (sc.l.Size()-1); j++) {
+            SPoint &sp = sc.l.elem[j];
             double ap[3];
-            ap[0] = sp->p.x;
-            ap[1] = sp->p.y;
-            ap[2] = sp->p.z;
-            gluTessVertex(gt, ap, &(sp->p));
+            ap[0] = sp.p.x;
+            ap[1] = sp.p.y;
+            ap[2] = sp.p.z;
+            gluTessVertex(gt, ap, &(sp.p));
         }
         gluTessEndContour(gt);
     }
     gluTessEndPolygon(gt);
 }
 
-void ssglDebugPolygon(SPolygon *p)
+void ssglDebugPolygon(SPolygon &p)
 {
-    int i, j;
     ssglLineWidth(2);
     glPointSize(7);
     glDisable(GL_DEPTH_TEST);
-    for(i = 0; i < p->l.n; i++) {
-        SContour *sc = &(p->l.elem[i]);
-        for(j = 0; j < (sc->l.n-1); j++) {
-            Vector a = (sc->l.elem[j]).p;
-            Vector b = (sc->l.elem[j+1]).p;
+    for(SContour &sc : p.l) {
+        for(int j = 0; j < (sc.l.Size()-1); j++) {
+            Vector &a = (sc.l.elem[j]).p;
+            Vector &b = (sc.l.elem[j+1]).p;
 
             ssglLockColorTo(RGBi(0, 0, 255));
             Vector d = (a.Minus(b)).WithMagnitude(-0);
@@ -409,28 +402,27 @@ void ssglDebugPolygon(SPolygon *p)
     }
 }
 
-void ssglDrawEdges(SEdgeList *el, bool endpointsToo)
+void ssglDrawEdges(SEdgeList &el, bool endpointsToo)
 {
-    SEdge *se;
     glBegin(GL_LINES);
-    for(se = el->l.First(); se; se = el->l.NextAfter(se)) {
-        ssglVertex3v(se->a);
-        ssglVertex3v(se->b);
+    for(SEdge &se : el.l) {
+        ssglVertex3v(se.a);
+        ssglVertex3v(se.b);
     }
     glEnd();
 
     if(endpointsToo) {
         glPointSize(12);
         glBegin(GL_POINTS);
-        for(se = el->l.First(); se; se = el->l.NextAfter(se)) {
-            ssglVertex3v(se->a);
-            ssglVertex3v(se->b);
+        for(SEdge &se : el.l) {
+            ssglVertex3v(se.a);
+            ssglVertex3v(se.b);
         }
         glEnd();
     }
 }
 
-void ssglDebugMesh(SMesh *m)
+void ssglDebugMesh(SMesh &m)
 {
     int i;
     ssglLineWidth(1);
@@ -440,29 +432,27 @@ void ssglDebugMesh(SMesh *m)
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     ssglColorRGBa(RGBi(0, 255, 0), 1.0);
     glBegin(GL_TRIANGLES);
-    for(i = 0; i < m->l.n; i++) {
-        STriangle *t = &(m->l.elem[i]);
-        if(t->tag) continue;
+    for(STriangle &t : m.l) {
+        if(t.tag) continue;
 
-        ssglVertex3v(t->a);
-        ssglVertex3v(t->b);
-        ssglVertex3v(t->c);
+        ssglVertex3v(t.a);
+        ssglVertex3v(t.b);
+        ssglVertex3v(t.c);
     }
     glEnd();
     ssglDepthRangeOffset(0);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void ssglMarkPolygonNormal(SPolygon *p)
+void ssglMarkPolygonNormal(SPolygon &p)
 {
     Vector tail = Vector::From(0, 0, 0);
     int i, j, cnt = 0;
     // Choose some reasonable center point.
-    for(i = 0; i < p->l.n; i++) {
-        SContour *sc = &(p->l.elem[i]);
-        for(j = 0; j < (sc->l.n-1); j++) {
-            SPoint *sp = &(sc->l.elem[j]);
-            tail = tail.Plus(sp->p);
+    for(SContour &sc : p.l) {
+        for(j = 0; j < (sc.l.Size()-1); j++) {
+            SPoint &sp = sc.l.elem[j];
+            tail = tail.Plus(sp.p);
             cnt++;
         }
     }
@@ -470,8 +460,8 @@ void ssglMarkPolygonNormal(SPolygon *p)
     tail = tail.ScaledBy(1.0/cnt);
 
     Vector gn = SS.GW.projRight.Cross(SS.GW.projUp);
-    Vector tip = tail.Plus((p->normal).WithMagnitude(40/SS.GW.scale));
-    Vector arrow = (p->normal).WithMagnitude(15/SS.GW.scale);
+    Vector tip = tail.Plus((p.normal).WithMagnitude(40/SS.GW.scale));
+    Vector arrow = (p.normal).WithMagnitude(15/SS.GW.scale);
 
     glColor3d(1, 1, 0);
     glBegin(GL_LINES);

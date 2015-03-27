@@ -92,9 +92,9 @@ void Slvs_Solve(Slvs_System *ssys, Slvs_hGroup shg)
 
         p.h.v = sp->h;
         p.val = sp->val;
-        SK.param.Add(&p);
+        SK.param.Add(p);
         if(sp->group == shg) {
-            SYS.param.Add(&p);
+            SYS.param.Add(p);
         }
     }
 
@@ -130,7 +130,7 @@ default: dbp("bad entity type %d", se->type); return;
         e.param[2].v    = se->param[2];
         e.param[3].v    = se->param[3];
 
-        SK.entity.Add(&e);
+        SK.entity.Add(e);
     }
 
     for(i = 0; i < ssys->constraints; i++) {
@@ -191,13 +191,13 @@ default: dbp("bad constraint type %d", sc->type); return;
         c.other         = (sc->other) ? true : false;
         c.other2        = (sc->other2) ? true : false;
 
-        SK.constraint.Add(&c);
+        SK.constraint.Add(c);
     }
 
     for(i = 0; i < (int)arraylen(ssys->dragged); i++) {
         if(ssys->dragged[i]) {
             hParam hp = { ssys->dragged[i] };
-            SYS.dragged.Add(&hp);
+            SYS.dragged.Add(hp);
         }
     }
 
@@ -239,10 +239,10 @@ default: dbp("bad constraint type %d", sc->type); return;
 
     if(ssys->failed) {
         // Copy over any the list of problematic constraints.
-        for(i = 0; i < ssys->faileds && i < bad.n; i++) {
+        for(i = 0; i < ssys->faileds && i < bad.Size(); i++) {
             ssys->failed[i] = bad.elem[i].v;
         }
-        ssys->faileds = bad.n;
+        ssys->faileds = bad.Size();
     }
 
     bad.Clear();

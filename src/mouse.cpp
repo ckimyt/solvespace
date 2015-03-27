@@ -39,7 +39,7 @@ void GraphicsWindow::AddPointToDraggedList(hEntity hp) {
             return;
         }
     }
-    pending.points.Add(&hp);
+    pending.points.Add(hp);
 }
 
 void GraphicsWindow::StartDraggingByEntity(hEntity he) {
@@ -633,8 +633,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
             if(!p->IsPoint()) break;
 
             SK.constraint.ClearTags();
-            Constraint *c;
-            for(c = SK.constraint.First(); c; c = SK.constraint.NextAfter(c)) {
+            for(Constraint *c : SK.constraint) {
                 if(c->type != Constraint::POINTS_COINCIDENT) continue;
                 if(c->ptA.v == p->h.v || c->ptB.v == p->h.v) {
                     c->tag = 1;
@@ -728,7 +727,7 @@ hRequest GraphicsWindow::AddRequest(int type, bool rememberForUndo) {
     }
     r.workplane = ActiveWorkplane();
     r.type = type;
-    SK.request.AddAndAssignId(&r);
+    SK.request.AddAndAssignId(r);
 
     // We must regenerate the parameters, so that the code that tries to
     // place this request's entities where the mouse is can do so. But
@@ -1174,7 +1173,7 @@ void GraphicsWindow::EditControlDone(const char *s) {
         return;
     }
 
-    Expr *e = Expr::From(s, true);
+    ExprRef e = Expr::From(s, true);
     if(e) {
         SS.UndoRemember();
 

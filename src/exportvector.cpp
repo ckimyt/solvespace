@@ -656,8 +656,7 @@ void GCodeFileWriter::FinishAndCloseFile(void) {
     for(i = 0; i < SS.gCode.passes; i++) {
         double depth = (SS.gCode.depth / SS.gCode.passes)*(i+1);
 
-        SContour *sc;
-        for(sc = sp.l.First(); sc; sc = sp.l.NextAfter(sc)) {
+        for(SContour *sc : sp.l) {
             if(sc->l.n < 2) continue;
 
             SPoint *pt = sc->l.First();
@@ -708,7 +707,7 @@ void Step2dFileWriter::FinishPath(RgbColor strokeRgb, double lineWidth,
 
 void Step2dFileWriter::Bezier(SBezier *sb) {
     int c = sfw.ExportCurve(sb);
-    sfw.curves.Add(&c);
+    sfw.curves.Add(c);
 }
 
 void Step2dFileWriter::FinishAndCloseFile(void) {

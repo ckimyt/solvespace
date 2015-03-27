@@ -12,14 +12,13 @@ void SolveSpaceUI::Clipboard::Clear(void) {
 }
 
 hEntity SolveSpaceUI::Clipboard::NewEntityFor(hEntity he) {
-    ClipboardRequest *cr;
-    for(cr = r.First(); cr; cr = r.NextAfter(cr)) {
-        if(cr->oldEnt.v == he.v) {
-            return cr->newReq.entity(0);
+    for(ClipboardRequest &cr : r) {
+        if(cr.oldEnt.v == he.v) {
+            return cr.newReq.entity(0);
         }
         for(int i = 0; i < MAX_POINTS_IN_ENTITY; i++) {
-            if(cr->oldPointEnt[i].v == he.v) {
-                return cr->newReq.entity(1+i);
+            if(cr.oldPointEnt[i].v == he.v) {
+                return cr.newReq.entity(1+i);
             }
         }
     }
@@ -38,17 +37,16 @@ bool SolveSpaceUI::Clipboard::ContainsEntity(hEntity he) {
 void GraphicsWindow::DeleteSelection(void) {
     SK.request.ClearTags();
     SK.constraint.ClearTags();
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
+    for(Selection &s : selection) {
         hRequest r = { 0 };
-        if(s->entity.v && s->entity.isFromRequest()) {
-            r = s->entity.request();
+        if(s.entity.v && s.entity.isFromRequest()) {
+            r = s.entity.request();
         }
         if(r.v && !r.IsFromReferences()) {
             SK.request.Tag(r, 1);
         }
-        if(s->constraint.v) {
-            SK.constraint.Tag(s->constraint, 1);
+        if(s.constraint.v) {
+            SK.constraint.Tag(s.constraint, 1);
         }
     }
 
@@ -68,11 +66,10 @@ void GraphicsWindow::CopySelection(void) {
            n = wrkpln->NormalN(),
            p = SK.GetEntity(wrkpl->point[0])->PointGetNum();
 
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-        if(!s->entity.v) continue;
+    for(Selection &s : selection) {
+        if(!s.entity.v) continue;
         // Work only on entities that have requests that will generate them.
-        Entity *e = SK.GetEntity(s->entity);
+        Entity *e = SK.GetEntity(s.entity);
         bool hasDistance;
         int req, pts;
         if(!EntReqTable::GetEntityInfo(e->type, e->extraPoints,
@@ -104,18 +101,17 @@ void GraphicsWindow::CopySelection(void) {
             cr.oldPointEnt[i] = e->point[i];
         }
 
-        SS.clipboard.r.Add(&cr);
+        SS.clipboard.r.Add(cr);
     }
 
-    Constraint *c;
-    for(c = SK.constraint.First(); c; c = SK.constraint.NextAfter(c)) {
+    for(Constraint *c : SK.constraint) {
         if(c->type == Constraint::POINTS_COINCIDENT) {
             if(!SS.clipboard.ContainsEntity(c->ptA)) continue;
             if(!SS.clipboard.ContainsEntity(c->ptB)) continue;
         } else {
             continue;
         }
-        SS.clipboard.c.Add(c);
+        SS.clipboard.c.Add(*c);
     }
 }
 
@@ -127,15 +123,14 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
            n = wrkpln->NormalN(),
            p = SK.GetEntity(wrkpl->point[0])->PointGetNum();
 
-    ClipboardRequest *cr;
-    for(cr = SS.clipboard.r.First(); cr; cr = SS.clipboard.r.NextAfter(cr)) {
-        hRequest hr = AddRequest(cr->type, false);
+    for(ClipboardRequest &cr : SS.clipboard.r) {
+        hRequest hr = AddRequest(cr.type, false);
         Request *r = SK.GetRequest(hr);
-        r->extraPoints  = cr->extraPoints;
-        r->style        = cr->style;
-        r->str.strcpy(    cr->str.str);
-        r->font.strcpy(   cr->font.str);
-        r->construction = cr->construction;
+        r->extraPoints  = cr.extraPoints;
+        r->style        = cr.style;
+        r->str.strcpy(    cr.str.str);
+        r->font.strcpy(   cr.font.str);
+        r->construction = cr.construction;
         // Need to regen to get the right number of points, if extraPoints
         // changed.
         SS.GenerateAll(-1, -1);
@@ -145,7 +140,7 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         EntReqTable::GetRequestInfo(r->type, r->extraPoints,
             NULL, &pts, NULL, &hasDistance);
         for(i = 0; i < pts; i++) {
-            Vector pt = cr->point[i];
+            Vector pt = cr.point[i];
             // We need the reflection to occur within the workplane; it may
             // otherwise correspond to just a rotation as projected.
             if(scale < 0) {
@@ -162,21 +157,20 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         }
         if(hasDistance) {
             SK.GetEntity(hr.entity(64))->DistanceForceTo(
-                                            cr->distance*fabs(scale));
+                                            cr.distance*fabs(scale));
         }
 
-        cr->newReq = hr;
+        cr.newReq = hr;
         MakeSelected(hr.entity(0));
         for(i = 0; i < pts; i++) {
             MakeSelected(hr.entity(i+1));
         }
     }
 
-    Constraint *c;
-    for(c = SS.clipboard.c.First(); c; c = SS.clipboard.c.NextAfter(c)) {
-        if(c->type == Constraint::POINTS_COINCIDENT) {
-            Constraint::ConstrainCoincident(SS.clipboard.NewEntityFor(c->ptA),
-                                            SS.clipboard.NewEntityFor(c->ptB));
+    for(Constraint &c : SS.clipboard.c) {
+        if(c.type == Constraint::POINTS_COINCIDENT) {
+            Constraint::ConstrainCoincident(SS.clipboard.NewEntityFor(c.ptA),
+                                            SS.clipboard.NewEntityFor(c.ptB));
         }
     }
 
@@ -201,7 +195,7 @@ void GraphicsWindow::MenuClipboard(int id) {
         }
 
         case MNU_PASTE_TRANSFORM: {
-            if(SS.clipboard.r.n == 0) {
+            if(SS.clipboard.r.Size() == 0) {
                 Error("Clipboard is empty; nothing to paste.");
                 break;
             }
@@ -240,7 +234,7 @@ void GraphicsWindow::MenuClipboard(int id) {
 }
 
 bool TextWindow::EditControlDoneForPaste(const char *s) {
-    Expr *e;
+    ExprRef e;
     switch(edit.meaning) {
         case EDIT_PASTE_TIMES_REPEATED: {
             e = Expr::From(s, true);
@@ -332,7 +326,7 @@ void TextWindow::ScreenPasteTransformed(int link, uint32_t v) {
                 Message("Transformation is identity. So all copies will be "
                         "exactly on top of each other.");
             }
-            if(SS.TW.shown.paste.times*SS.clipboard.r.n > 100) {
+            if(SS.TW.shown.paste.times*SS.clipboard.r.Size() > 100) {
                 Error("Too many items to paste; split this into smaller "
                       "pastes.");
                 break;

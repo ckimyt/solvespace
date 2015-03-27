@@ -152,15 +152,14 @@ int StepFileWriter::ExportCurveLoop(SBezierLoop *loop, bool inner) {
             id+1, id);
 
         int oe = id+1;
-        listOfTrims.Add(&oe);
+        listOfTrims.Add(oe);
         id += 2;
 
         prevFinish = thisFinish;
     }
 
     fprintf(f, "#%d=EDGE_LOOP('',(", id);
-    int *oe;
-    for(oe = listOfTrims.First(); oe; oe = listOfTrims.NextAfter(oe)) {
+    for(int *oe : listOfTrims) {
         fprintf(f, "#%d", *oe);
         if(listOfTrims.NextAfter(oe) != NULL) fprintf(f, ",");
     }
@@ -245,36 +244,34 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
     // So in our list of SBezierLoopSet, each set contains at least one loop
     // (the outer boundary), plus any inner loops associated with that outer
     // loop.
-    SBezierLoopSet *sbls;
-    for(sbls = sblss.l.First(); sbls; sbls = sblss.l.NextAfter(sbls)) {
+    for(SBezierLoopSet *sbls : sblss.l) {
         SBezierLoop *loop = sbls->l.First();
 
         List<int> listOfLoops = {};
         // Create the face outer boundary from the outer loop.
         int fob = ExportCurveLoop(loop, false);
-        listOfLoops.Add(&fob);
+        listOfLoops.Add(fob);
 
         // And create the face inner boundaries from any inner loops that
         // lie within this contour.
         loop = sbls->l.NextAfter(loop);
         for(; loop; loop = sbls->l.NextAfter(loop)) {
             int fib = ExportCurveLoop(loop, true);
-            listOfLoops.Add(&fib);
+            listOfLoops.Add(fib);
         }
 
         // And now create the face that corresponds to this outer loop
         // and all of its holes.
         int advFaceId = id;
         fprintf(f, "#%d=ADVANCED_FACE('',(", advFaceId);
-        int *fb;
-        for(fb = listOfLoops.First(); fb; fb = listOfLoops.NextAfter(fb)) {
+        for(int *fb : listOfLoops) {
             fprintf(f, "#%d", *fb);
             if(listOfLoops.NextAfter(fb) != NULL) fprintf(f, ",");
         }
 
         fprintf(f, "),#%d,.T.);\n", srfid);
         fprintf(f, "\n");
-        advancedFaces.Add(&advFaceId);
+        advancedFaces.Add(advFaceId);
 
         id++;
         listOfLoops.Clear();
@@ -336,8 +333,7 @@ void StepFileWriter::ExportSurfacesTo(char *file) {
     }
 
     fprintf(f, "#%d=CLOSED_SHELL('',(", id);
-    int *af;
-    for(af = advancedFaces.First(); af; af = advancedFaces.NextAfter(af)) {
+    for(int *af : advancedFaces) {
         fprintf(f, "#%d", *af);
         if(advancedFaces.NextAfter(af) != NULL) fprintf(f, ",");
     }
@@ -356,8 +352,7 @@ void StepFileWriter::ExportSurfacesTo(char *file) {
 
 void StepFileWriter::WriteWireframe(void) {
     fprintf(f, "#%d=GEOMETRIC_CURVE_SET('curves',(", id);
-    int *c;
-    for(c = curves.First(); c; c = curves.NextAfter(c)) {
+    for(int *c : curves) {
         fprintf(f, "#%d", *c);
         if(curves.NextAfter(c) != NULL) fprintf(f, ",");
     }

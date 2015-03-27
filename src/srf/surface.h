@@ -37,9 +37,9 @@ public:
     };
 
     static SBspUv *Alloc(void);
-    static SBspUv *From(SEdgeList *el, SSurface *srf);
+    static SBspUv *From(SEdgeList &el, SSurface *srf);
 
-    void ScalePoints(Point2d *pt, Point2d *a, Point2d *b, SSurface *srf);
+    void ScalePoints(Point2d &pt, Point2d &a, Point2d &b, SSurface *srf);
     double ScaledSignedDistanceToLine(Point2d pt, Point2d a, Point2d b,
         SSurface *srf);
     double ScaledDistanceToLine(Point2d pt, Point2d a, Point2d b, bool seg,
@@ -80,25 +80,25 @@ public:
 
     Vector PointAt(double t);
     Vector TangentAt(double t);
-    void ClosestPointTo(Vector p, double *t, bool converge=true);
-    void SplitAt(double t, SBezier *bef, SBezier *aft);
-    bool PointOnThisAndCurve(SBezier *sbb, Vector *p);
+    void ClosestPointTo(Vector p, double &t, bool converge=true);
+    void SplitAt(double t, SBezier &bef, SBezier &aft);
+    bool PointOnThisAndCurve(SBezier &sbb, Vector &p);
 
     Vector Start(void);
     Vector Finish(void);
     bool Equals(SBezier *b);
-    void MakePwlInto(SEdgeList *sel, double chordTol=0);
-    void MakePwlInto(List<SCurvePt> *l, double chordTol=0);
-    void MakePwlInto(SContour *sc, double chordTol=0);
-    void MakePwlInto(List<Vector> *l, double chordTol=0);
-    void MakePwlWorker(List<Vector> *l, double ta, double tb, double chordTol);
+    void MakePwlInto(SEdgeList &sel, double chordTol=0);
+    void MakePwlInto(List<SCurvePt> &l, double chordTol=0);
+    void MakePwlInto(SContour &sc, double chordTol=0);
+    void MakePwlInto(List<Vector> &l, double chordTol=0);
+    void MakePwlWorker(List<Vector> &l, double ta, double tb, double chordTol);
 
-    void AllIntersectionsWith(SBezier *sbb, SPointList *spl);
-    void GetBoundingProjd(Vector u, Vector orig, double *umin, double *umax);
+    void AllIntersectionsWith(SBezier &sbb, SPointList &spl);
+    void GetBoundingProjd(Vector u, Vector orig, double &umin, double &umax);
     void Reverse(void);
 
     bool IsInPlane(Vector n, double d);
-    bool IsCircle(Vector axis, Vector *center, double *r);
+    bool IsCircle(Vector axis, Vector &center, double &r);
     bool IsRational(void);
 
     SBezier TransformedBy(Vector t, Quaternion q, double scale);
@@ -121,9 +121,9 @@ public:
     void Clear(void);
     void ScaleSelfBy(double s);
     void CullIdenticalBeziers(void);
-    void AllIntersectionsWith(SBezierList *sblb, SPointList *spl);
-    bool GetPlaneContainingBeziers(Vector *p, Vector *u, Vector *v,
-                                        Vector *notCoplanarAt);
+    void AllIntersectionsWith(SBezierList &sblb, SPointList &spl);
+    bool GetPlaneContainingBeziers(Vector &p, Vector &u, Vector &v,
+                                        Vector &notCoplanarAt);
 };
 
 class SBezierLoop {
@@ -134,11 +134,11 @@ public:
     inline void Clear(void) { l.Clear(); }
     bool IsClosed(void);
     void Reverse(void);
-    void MakePwlInto(SContour *sc, double chordTol=0);
-    void GetBoundingProjd(Vector u, Vector orig, double *umin, double *umax);
+    void MakePwlInto(SContour &sc, double chordTol=0);
+    void GetBoundingProjd(Vector u, Vector orig, double &umin, double &umax);
 
-    static SBezierLoop FromCurves(SBezierList *spcl,
-                                  bool *allClosed, SEdge *errorAt);
+    static SBezierLoop FromCurves(SBezierList &spcl,
+                                  bool &allClosed, SEdge *errorAt);
 };
 
 class SBezierLoopSet {
@@ -147,13 +147,13 @@ public:
     Vector normal;
     Vector point;
 
-    static SBezierLoopSet From(SBezierList *spcl, SPolygon *poly,
+    static SBezierLoopSet From(SBezierList &spcl, SPolygon &poly,
                                double chordTol,
-                               bool *allClosed, SEdge *errorAt,
-                               SBezierList *openContours);
+                               bool &allClosed, SEdge &errorAt,
+                               SBezierList &openContours);
 
-    void GetBoundingProjd(Vector u, Vector orig, double *umin, double *umax);
-    void MakePwlInto(SPolygon *sp);
+    void GetBoundingProjd(Vector u, Vector orig, double &umin, double &umax);
+    void MakePwlInto(SPolygon &sp);
     void Clear(void);
 };
 
@@ -161,12 +161,12 @@ class SBezierLoopSetSet {
 public:
     List<SBezierLoopSet>    l;
 
-    void FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz, SSurface *srfuv,
+    void FindOuterFacesFrom(SBezierList &sbl, SPolygon &spxyz, SSurface &srfuv,
                             double chordTol,
-                            bool *allClosed, SEdge *notClosedAt,
-                            bool *allCoplanar, Vector *notCoplanarAt,
-                            SBezierList *openContours);
-    void AddOpenPath(SBezier *sb);
+                            bool &allClosed, SEdge &notClosedAt,
+                            bool &allCoplanar, Vector &notCoplanarAt,
+                            SBezierList &openContours);
+    void AddOpenPath(SBezier &sb);
     void Clear(void);
 };
 
@@ -206,8 +206,8 @@ public:
     SCurve MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
                                 SSurface *srfA, SSurface *srfB);
     void RemoveShortSegments(SSurface *srfA, SSurface *srfB);
-    SSurface *GetSurfaceA(SShell *a, SShell *b);
-    SSurface *GetSurfaceB(SShell *a, SShell *b);
+    SSurface *GetSurfaceA(SShell &a, SShell &b);
+    SSurface *GetSurfaceB(SShell &a, SShell &b);
 
     void Clear(void);
 };
@@ -226,7 +226,7 @@ public:
     Vector      start;
     Vector      finish;
 
-    static STrimBy EntireCurve(SShell *shell, hSCurve hsc, bool bkwds);
+    static STrimBy EntireCurve(SShell &shell, hSCurve hsc, bool bkwds);
 };
 
 // An intersection point between a line and a surface
@@ -268,8 +268,8 @@ public:
     // a point into our surface.
     Point2d         cached;
 
-    static SSurface FromExtrusionOf(SBezier *spc, Vector t0, Vector t1);
-    static SSurface FromRevolutionOf(SBezier *sb, Vector pt, Vector axis,
+    static SSurface FromExtrusionOf(SBezier &spc, Vector t0, Vector t1);
+    static SSurface FromRevolutionOf(SBezier &sb, Vector pt, Vector axis,
                                         double thetas, double thetaf);
     static SSurface FromPlane(Vector pt, Vector u, Vector v);
     static SSurface FromTransformationOf(SSurface *a, Vector t, Quaternion q,
@@ -278,18 +278,18 @@ public:
     void ScaleSelfBy(double s);
 
     void EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
-                                  Vector *pt, Vector *enin, Vector *enout,
-                                  Vector *surfn,
+                                  Vector &pt, Vector &enin, Vector &enout,
+                                  Vector &surfn,
                                   uint32_t auxA,
-                                  SShell *shell, SShell *sha, SShell *shb);
-    void FindChainAvoiding(SEdgeList *src, SEdgeList *dest, SPointList *avoid);
-    SSurface MakeCopyTrimAgainst(SShell *parent, SShell *a, SShell *b,
-                                    SShell *into, int type);
-    void TrimFromEdgeList(SEdgeList *el, bool asUv);
-    void IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
-                          SShell *into);
-    void AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
-                          SShell *agnstA, SShell *agnstB, SShell *into);
+                                  SShell &shell, SShell &sha, SShell &shb);
+    void FindChainAvoiding(SEdgeList &src, SEdgeList &dest, SPointList &avoid);
+    SSurface MakeCopyTrimAgainst(SShell &parent, SShell &a, SShell &b,
+                                    SShell &into, int type);
+    void TrimFromEdgeList(SEdgeList &el, bool asUv);
+    void IntersectAgainst(SSurface *b, SShell &agnstA, SShell &agnstB,
+                          SShell &into);
+    void AddExactIntersectionCurve(SBezier &sb, SSurface *srfB,
+                          SShell &agnstA, SShell &agnstB, SShell &into);
 
     typedef struct {
         int     tag;
@@ -303,50 +303,50 @@ public:
     double DepartureFromCoplanar(void);
     void SplitInHalf(bool byU, SSurface *sa, SSurface *sb);
     void AllPointsIntersecting(Vector a, Vector b,
-                                    List<SInter> *l,
+                                    List<SInter> &l,
                                     bool seg, bool trimmed, bool inclTangent);
     void AllPointsIntersectingUntrimmed(Vector a, Vector b,
-                                            int *cnt, int *level,
-                                            List<Inter> *l, bool segment,
+                                            int &cnt, int &level,
+                                            List<Inter> &l, bool segment,
                                             SSurface *sorig);
 
-    void ClosestPointTo(Vector p, Point2d *puv, bool converge=true);
-    void ClosestPointTo(Vector p, double *u, double *v, bool converge=true);
-    bool ClosestPointNewton(Vector p, double *u, double *v, bool converge=true);
+    void ClosestPointTo(Vector p, Point2d &puv, bool converge=true);
+    void ClosestPointTo(Vector p, double &u, double &v, bool converge=true);
+    bool ClosestPointNewton(Vector p, double &u, double &v, bool converge=true);
 
-    bool PointIntersectingLine(Vector p0, Vector p1, double *u, double *v);
+    bool PointIntersectingLine(Vector p0, Vector p1, double &u, double &v);
     Vector ClosestPointOnThisAndSurface(SSurface *srf2, Vector p);
-    void PointOnSurfaces(SSurface *s1, SSurface *s2, double *u, double *v);
+    void PointOnSurfaces(SSurface *s1, SSurface *s2, double &u, double &v);
     Vector PointAt(double u, double v);
     Vector PointAt(Point2d puv);
-    void TangentsAt(double u, double v, Vector *tu, Vector *tv);
+    void TangentsAt(double u, double v, Vector &tu, Vector *tv);
     Vector NormalAt(Point2d puv);
     Vector NormalAt(double u, double v);
     bool LineEntirelyOutsideBbox(Vector a, Vector b, bool segment);
-    void GetAxisAlignedBounding(Vector *ptMax, Vector *ptMin);
+    void GetAxisAlignedBounding(Vector &ptMax, Vector &ptMin);
     bool CoincidentWithPlane(Vector n, double d);
     bool CoincidentWith(SSurface *ss, bool sameNormal);
-    bool IsExtrusion(SBezier *of, Vector *along);
-    bool IsCylinder(Vector *axis, Vector *center, double *r,
-                        Vector *start, Vector *finish);
+    bool IsExtrusion(SBezier &of, Vector &along);
+    bool IsCylinder(Vector &axis, Vector &center, double &r,
+                        Vector &start, Vector &finish);
 
-    void TriangulateInto(SShell *shell, SMesh *sm);
+    void TriangulateInto(SShell &shell, SMesh &sm);
 
     // these are intended as bitmasks, even though there's just one now
     enum {
         AS_UV  = 0x01,
         AS_XYZ = 0x00
     };
-    void MakeTrimEdgesInto(SEdgeList *sel, int flags, SCurve *sc, STrimBy *stb);
-    void MakeEdgesInto(SShell *shell, SEdgeList *sel, int flags,
+    void MakeTrimEdgesInto(SEdgeList &sel, int flags, SCurve *sc, STrimBy *stb);
+    void MakeEdgesInto(SShell &shell, SEdgeList &sel, int flags,
             SShell *useCurvesFrom=NULL);
 
     Vector ExactSurfaceTangentAt(Vector p, SSurface *srfA, SSurface *srfB,
-                                Vector dir);
-    void MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *sbl);
-    void MakeClassifyingBsp(SShell *shell, SShell *useCurvesFrom);
+                                 Vector dir);
+    void MakeSectionEdgesInto(SShell &shell, SEdgeList &sel, SBezierList &sbl);
+    void MakeClassifyingBsp(SShell &shell, SShell *useCurvesFrom);
     double ChordToleranceForEdge(Vector a, Vector b);
-    void MakeTriangulationGridInto(List<double> *l, double vs, double vf,
+    void MakeTriangulationGridInto(List<double> &l, double vs, double vf,
                                     bool swapped);
     Vector PointAtMaybeSwapped(double u, double v, bool swapped);
 
@@ -361,29 +361,29 @@ public:
 
     bool                        booleanFailed;
 
-    void MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1,
+    void MakeFromExtrusionOf(SBezierLoopSet &sbls, Vector t0, Vector t1,
                              RgbColor color, double alpha);
-    void MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
+    void MakeFromRevolutionOf(SBezierLoopSet &sbls, Vector pt, Vector axis,
                               RgbColor color, double alpha);
 
-    void MakeFromUnionOf(SShell *a, SShell *b);
-    void MakeFromDifferenceOf(SShell *a, SShell *b);
+    void MakeFromUnionOf(SShell &a, SShell &b);
+    void MakeFromDifferenceOf(SShell &a, SShell &b);
     enum {
         AS_UNION      = 10,
         AS_DIFFERENCE = 11,
         AS_INTERSECT  = 12
     };
-    void MakeFromBoolean(SShell *a, SShell *b, int type);
-    void CopyCurvesSplitAgainst(bool opA, SShell *agnst, SShell *into);
-    void CopySurfacesTrimAgainst(SShell *sha, SShell *shb, SShell *into,
+    void MakeFromBoolean(SShell &a, SShell &b, int type);
+    void CopyCurvesSplitAgainst(bool opA, SShell &agnst, SShell &into);
+    void CopySurfacesTrimAgainst(SShell &sha, SShell &shb, SShell &into,
                                     int type);
-    void MakeIntersectionCurvesAgainst(SShell *against, SShell *into);
-    void MakeClassifyingBsps(SShell *useCurvesFrom);
-    void AllPointsIntersecting(Vector a, Vector b, List<SInter> *il,
+    void MakeIntersectionCurvesAgainst(SShell &against, SShell &into);
+    void MakeClassifyingBsps(SShell &useCurvesFrom);
+    void AllPointsIntersecting(Vector a, Vector b, List<SInter> &il,
                                 bool seg, bool trimmed, bool inclTangent);
     void MakeCoincidentEdgesInto(SSurface *proto, bool sameNormal,
-                                 SEdgeList *el, SShell *useCurvesFrom);
-    void RewriteSurfaceHandlesForCurves(SShell *a, SShell *b);
+                                 SEdgeList &el, SShell &useCurvesFrom);
+    void RewriteSurfaceHandlesForCurves(SShell &a, SShell &b);
     void CleanupAfterBoolean(void);
 
     // Definitions when classifying regions of a surface; it is either inside,
@@ -397,21 +397,21 @@ public:
     };
     static const double DOTP_TOL;
     int ClassifyRegion(Vector edge_n, Vector inter_surf_n, Vector edge_surf_n);
-    bool ClassifyEdge(int *indir, int *outdir,
+    bool ClassifyEdge(int &indir, int &outdir,
                       Vector ea, Vector eb,
                       Vector p,
                       Vector edge_n_in, Vector edge_n_out, Vector surf_n);
 
-    void MakeFromCopyOf(SShell *a);
-    void MakeFromTransformationOf(SShell *a,
-                                    Vector trans, Quaternion q, double scale);
-    void MakeFromAssemblyOf(SShell *a, SShell *b);
+    void MakeFromCopyOf(SShell &a);
+    void MakeFromTransformationOf(SShell &a,
+                                  Vector trans, Quaternion q, double scale);
+    void MakeFromAssemblyOf(SShell &a, SShell &b);
     void MergeCoincidentSurfaces(void);
 
-    void TriangulateInto(SMesh *sm);
+    void TriangulateInto(SMesh &sm);
     void MakeEdgesInto(SEdgeList *sel);
     void MakeSectionEdgesInto(Vector n, double d,
-                                SEdgeList *sel, SBezierList *sbl);
+                                SEdgeList &sel, SBezierList &sbl);
     bool IsEmpty(void);
     void RemapFaces(Group *g, int remap);
     void Clear(void);

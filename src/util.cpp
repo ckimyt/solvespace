@@ -768,14 +768,14 @@ Vector Vector::ClampWithin(double minv, double maxv) {
     return ret;
 }
 
-void Vector::MakeMaxMin(Vector *maxv, Vector *minv) {
-    maxv->x = max(maxv->x, x);
-    maxv->y = max(maxv->y, y);
-    maxv->z = max(maxv->z, z);
+void Vector::MakeMaxMin(Vector &maxv, Vector &minv) {
+    maxv.x = max(maxv.x, x);
+    maxv.y = max(maxv.y, y);
+    maxv.z = max(maxv.z, z);
 
-    minv->x = min(minv->x, x);
-    minv->y = min(minv->y, y);
-    minv->z = min(minv->z, z);
+    minv.x = min(minv.x, x);
+    minv.y = min(minv.y, y);
+    minv.z = min(minv.z, z);
 }
 
 bool Vector::OutsideAndNotOn(Vector maxv, Vector minv) {

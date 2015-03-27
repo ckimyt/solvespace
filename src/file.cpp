@@ -20,8 +20,7 @@ void SolveSpaceUI::ClearExisting(void) {
     UndoClearStack(&redo);
     UndoClearStack(&undo);
 
-    Group *g;
-    for(g = SK.group.First(); g; g = SK.group.NextAfter(g)) {
+    for(Group *g : SK.group) {
         g->Clear();
     }
 
@@ -45,7 +44,7 @@ hGroup SolveSpaceUI::CreateDefaultDrawingGroup(void) {
     hRequest hr = Request::HREQUEST_REFERENCE_XY;
     g.predef.origin = hr.entity(1);
     g.name.strcpy("sketch-in-plane");
-    SK.group.AddAndAssignId(&g);
+    SK.group.AddAndAssignId(g);
     SK.GetGroup(g.h)->activeWorkplane = g.h.entity(0);
     return g.h;
 }
@@ -59,7 +58,7 @@ void SolveSpaceUI::NewFile(void) {
     g.name.strcpy("#references");
     g.type = Group::DRAWING_3D;
     g.h = Group::HGROUP_REFERENCES;
-    SK.group.Add(&g);
+    SK.group.Add(g);
 
     // Let's create three two-d coordinate systems, for the coordinate
     // planes; these are our references, present in every sketch.
@@ -69,13 +68,13 @@ void SolveSpaceUI::NewFile(void) {
     r.workplane = Entity::FREE_IN_3D;
 
     r.h = Request::HREQUEST_REFERENCE_XY;
-    SK.request.Add(&r);
+    SK.request.Add(r);
 
     r.h = Request::HREQUEST_REFERENCE_YZ;
-    SK.request.Add(&r);
+    SK.request.Add(r);
 
     r.h = Request::HREQUEST_REFERENCE_ZX;
-    SK.request.Add(&r);
+    SK.request.Add(r);
 
     CreateDefaultDrawingGroup();
 }
@@ -237,8 +236,7 @@ void SolveSpaceUI::SaveUsingTable(int type) {
             case 'M': {
                 int j;
                 fprintf(fh, "{\n");
-                for(j = 0; j < p->M.n; j++) {
-                    EntityMap *em = &(p->M.elem[j]);
+                for(EntityMap &em : p->M) {
                     fprintf(fh, "    %d %08x %d\n",
                             em->h.v, em->input.v, em->copyNumber);
                 }
@@ -309,8 +307,7 @@ bool SolveSpaceUI::SaveToFile(const char *filename) {
     // to print either of those just does nothing if the mesh/shell is empty.
 
     SMesh *m = &(SK.group.elem[SK.group.n-1].runningMesh);
-    for(i = 0; i < m->l.n; i++) {
-        STriangle *tr = &(m->l.elem[i]);
+    for(STriangle &tr : m->l) {
         fprintf(fh, "Triangle %08x %08x %.20f "
                 "%.20f %.20f %.20f  %.20f %.20f %.20f  %.20f %.20f %.20f\n",
             tr->meta.face, tr->meta.color.ToPackedInt(), tr->meta.alpha,
@@ -401,7 +398,7 @@ void SolveSpaceUI::LoadUsingTable(char *key, char *val) {
                         if(sscanf(line2, "%d %x %d", &(em.h.v), &(em.input.v),
                                                      &(em.copyNumber)) == 3)
                         {
-                            p->M.Add(&em);
+                            p->M.Add(em);
                         } else {
                             break;
                         }
@@ -451,24 +448,24 @@ bool SolveSpaceUI::LoadFromFile(const char *filename) {
             char *key = line, *val = e+1;
             LoadUsingTable(key, val);
         } else if(strcmp(line, "AddGroup")==0) {
-            SK.group.Add(&(sv.g));
+            SK.group.Add((sv.g));
             sv.g = {};
             sv.g.scale = 1; // default is 1, not 0; so legacy files need this
         } else if(strcmp(line, "AddParam")==0) {
             // params are regenerated, but we want to preload the values
             // for initial guesses
-            SK.param.Add(&(sv.p));
+            SK.param.Add((sv.p));
             sv.p = {};
         } else if(strcmp(line, "AddEntity")==0) {
             // entities are regenerated
         } else if(strcmp(line, "AddRequest")==0) {
-            SK.request.Add(&(sv.r));
+            SK.request.Add((sv.r));
             sv.r = {};
         } else if(strcmp(line, "AddConstraint")==0) {
-            SK.constraint.Add(&(sv.c));
+            SK.constraint.Add((sv.c));
             sv.c = {};
         } else if(strcmp(line, "AddStyle")==0) {
-            SK.style.Add(&(sv.s));
+            SK.style.Add((sv.s));
             sv.s = {};
         } else if(strcmp(line, VERSION_STRING)==0) {
             // do nothing, version string
@@ -537,7 +534,7 @@ bool SolveSpaceUI::LoadEntitiesFromFile(const char *file, EntityList *le,
         } else if(strcmp(line, "AddParam")==0) {
 
         } else if(strcmp(line, "AddEntity")==0) {
-            le->Add(&(sv.e));
+            le->Add((sv.e));
             sv.e = {};
         } else if(strcmp(line, "AddRequest")==0) {
 
@@ -607,9 +604,9 @@ bool SolveSpaceUI::LoadEntitiesFromFile(const char *file, EntityList *le,
                 oops();
             }
             stb.backwards = (backwards != 0);
-            srf.trim.Add(&stb);
+            srf.trim.Add(stb);
         } else if(strcmp(line, "AddSurface")==0) {
-            sh->surface.Add(&srf);
+            sh->surface.Add(srf);
             srf = {};
         } else if(StrStartsWith(line, "Curve ")) {
             int isExact;
@@ -643,9 +640,9 @@ bool SolveSpaceUI::LoadEntitiesFromFile(const char *file, EntityList *le,
                 oops();
             }
             scpt.vertex = (vertex != 0);
-            crv.pts.Add(&scpt);
+            crv.pts.Add(scpt);
         } else if(strcmp(line, "AddCurve")==0) {
-            sh->curve.Add(&crv);
+            sh->curve.Add(crv);
             crv = {};
         } else {
             oops();
@@ -659,9 +656,7 @@ bool SolveSpaceUI::LoadEntitiesFromFile(const char *file, EntityList *le,
 void SolveSpaceUI::ReloadAllImported(void) {
     allConsistent = false;
 
-    int i;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    for(Group *g : SK.group) {
         if(g->type != Group::IMPORTED) continue;
 
         g->impEntity.Clear();

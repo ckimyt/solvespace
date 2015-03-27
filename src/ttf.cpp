@@ -17,9 +17,7 @@ void TtfFontList::LoadAll(void) {
     // Get the list of font files from the platform-specific code.
     LoadAllFontFiles();
 
-    int i;
-    for(i = 0; i < l.n; i++) {
-        TtfFont *tf = &(l.elem[i]);
+    for(TtfFont *tf : l) {
         tf->LoadFontFromFile(true);
     }
 
@@ -32,9 +30,7 @@ void TtfFontList::PlotString(char *font, char *str, double spacing,
 {
     LoadAll();
 
-    int i;
-    for(i = 0; i < l.n; i++) {
-        TtfFont *tf = &(l.elem[i]);
+    for(TtfFont *tf : l) {
         if(strcmp(tf->FontFileBaseName(), font)==0) {
             tf->LoadFontFromFile(false);
             tf->PlotString(str, spacing, sbl, origin, u, v);
@@ -45,9 +41,9 @@ void TtfFontList::PlotString(char *font, char *str, double spacing,
     // Couldn't find the font; so draw a big X for an error marker.
     SBezier sb;
     sb = SBezier::From(origin, origin.Plus(u).Plus(v));
-    sbl->l.Add(&sb);
+    sbl->l.Add(sb);
     sb = SBezier::From(origin.Plus(v), origin.Plus(u));
-    sbl->l.Add(&sb);
+    sbl->l.Add(sb);
 }
 
 
@@ -708,13 +704,13 @@ Vector TtfFont::TransformIntPoint(int x, int y) {
 void TtfFont::LineSegment(int x0, int y0, int x1, int y1) {
     SBezier sb = SBezier::From(TransformIntPoint(x0, y0),
                                TransformIntPoint(x1, y1));
-    beziers->l.Add(&sb);
+    beziers->l.Add(sb);
 }
 
 void TtfFont::Bezier(int x0, int y0, int x1, int y1, int x2, int y2) {
     SBezier sb = SBezier::From(TransformIntPoint(x0, y0),
                                TransformIntPoint(x1, y1),
                                TransformIntPoint(x2, y2));
-    beziers->l.Add(&sb);
+    beziers->l.Add(sb);
 }
 

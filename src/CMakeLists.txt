@@ -246,7 +246,7 @@ set(solvespace_HEADERS
     ui.h
     srf/surface.h)
 
-set(solvespace_SOURCES
+set(ok_SOURCES
     bsp.cpp
     clipboard.cpp
     confscreen.cpp
@@ -257,15 +257,28 @@ set(solvespace_SOURCES
     drawconstraint.cpp
     drawentity.cpp
     entity.cpp
-    export.cpp
-    exportstep.cpp
-    exportvector.cpp
     expr.cpp
-    file.cpp
     generate.cpp
     glhelper.cpp
     graphicswin.cpp
     group.cpp
+    system.cpp
+    util.cpp
+)
+
+set(solvespace_SOURCES
+    #srf/boolean.cpp
+    #srf/curve.cpp
+    #srf/merge.cpp
+    #srf/ratpoly.cpp
+    #srf/raycast.cpp
+    #srf/surface.cpp
+    #srf/surfinter.cpp
+    #srf/triangulate.cpp
+    #export.cpp
+    #exportstep.cpp
+    #exportvector.cpp
+    #file.cpp
     groupmesh.cpp
     mesh.cpp
     modify.cpp
@@ -274,29 +287,17 @@ set(solvespace_SOURCES
     request.cpp
     solvespace.cpp
     style.cpp
-    system.cpp
     textscreens.cpp
     textwin.cpp
     toolbar.cpp
     ttf.cpp
     undoredo.cpp
-    util.cpp
-    view.cpp
-    srf/boolean.cpp
-    srf/curve.cpp
-    srf/merge.cpp
-    srf/ratpoly.cpp
-    srf/raycast.cpp
-    srf/surface.cpp
-    srf/surfinter.cpp
-    srf/triangulate.cpp)
+    view.cpp)
 
 add_executable(solvespace WIN32 MACOSX_BUNDLE
-    ${libslvs_HEADERS}
-    ${libslvs_SOURCES}
-    ${util_SOURCES}
+    #${util_SOURCES}
     ${platform_HEADERS}
-    ${platform_SOURCES}
+    #${platform_SOURCES}
     ${platform_BUNDLED_RESOURCES}
     ${generated_HEADERS}
     ${solvespace_HEADERS}

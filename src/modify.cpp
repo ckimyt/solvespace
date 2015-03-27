@@ -12,9 +12,7 @@
 // on newpt. Useful when splitting or tangent arcing.
 //-----------------------------------------------------------------------------
 void GraphicsWindow::ReplacePointInConstraints(hEntity oldpt, hEntity newpt) {
-    int i;
-    for(i = 0; i < SK.constraint.n; i++) {
-        Constraint *c = &(SK.constraint.elem[i]);
+    for(Constraint *c : SK.constraint) {
 
         if(c->type == Constraint::POINTS_COINCIDENT) {
             if(c->ptA.v == oldpt.v) c->ptA = newpt;
@@ -33,8 +31,7 @@ void GraphicsWindow::FixConstraintsForRequestBeingDeleted(hRequest hr) {
     Request *r = SK.GetRequest(hr);
     if(r->group.v != SS.GW.activeGroup.v) return;
 
-    Entity *e;
-    for(e = SK.entity.First(); e; e = SK.entity.NextAfter(e)) {
+    for(Entity *e : SK.entity) {
         if(!(e->h.isFromRequest())) continue;
         if(e->h.request().v != hr.v) continue;
 
@@ -59,11 +56,11 @@ void GraphicsWindow::FixConstraintsForPointBeingDeleted(hEntity hpt) {
         if(c->group.v != SS.GW.activeGroup.v) continue;
 
         if(c->ptA.v == hpt.v) {
-            ld.Add(&(c->ptB));
+            ld.Add((c->ptB));
             c->tag = 1;
         }
         if(c->ptB.v == hpt.v) {
-            ld.Add(&(c->ptA));
+            ld.Add((c->ptA));
             c->tag = 1;
         }
     }
@@ -233,8 +230,7 @@ void GraphicsWindow::MakeTangentArc(void) {
     hRequest hreq[2];
     hEntity hent[2];
     bool pointf[2];
-    for(i = 0; i < SK.request.n; i++) {
-        Request *r = &(SK.request.elem[i]);
+    for(Request *r : SK.request) {
         if(r->group.v != activeGroup.v) continue;
         if(r->workplane.v != ActiveWorkplane().v) continue;
         if(r->construction) continue;
@@ -495,8 +491,7 @@ hEntity GraphicsWindow::SplitCubic(hEntity he, Vector pinter) {
     // contains the intersection point.
     double t;
     int i, j;
-    for(i = 0; i < sbl.l.n; i++) {
-        SBezier *sb = &(sbl.l.elem[i]);
+    for(SBezier *sb : sbl.l) {
         if(sb->deg != 3) oops();
 
         sb->ClosestPointTo(pinter, &t, false);
@@ -617,8 +612,7 @@ void GraphicsWindow::SplitLinesOrCurves(void) {
         // If there's multiple points, then take the one closest to the
         // mouse pointer.
         double dmin = VERY_POSITIVE;
-        SPoint *sp;
-        for(sp = inters.l.First(); sp; sp = inters.l.NextAfter(sp)) {
+        for(SPoint *sp : inters.l) {
             double d = ProjectPoint(sp->p).DistanceTo(currentMousePosition);
             if(d < dmin) {
                 dmin = d;

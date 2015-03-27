@@ -11,26 +11,19 @@
 SBsp2 *SBsp2::Alloc(void) { return (SBsp2 *)AllocTemporary(sizeof(SBsp2)); }
 SBsp3 *SBsp3::Alloc(void) { return (SBsp3 *)AllocTemporary(sizeof(SBsp3)); }
 
-SBsp3 *SBsp3::FromMesh(SMesh *m) {
+SBsp3 *SBsp3::FromMesh(SMesh &m) {
     SBsp3 *bsp3 = NULL;
     int i;
 
     SMesh mc = {};
-    for(i = 0; i < m->l.n; i++) {
-        mc.AddTriangle(&(m->l.elem[i]));
-    }
+    for(STriangle &t : m.l.elem)
+        mc.AddTriangle(t);
 
-    srand(0); // Let's be deterministic, at least!
-    int n = mc.l.n;
-    while(n > 1) {
-        int k = rand() % n;
-        n--;
-        swap(mc.l.elem[k], mc.l.elem[n]);
-    }
+    std::srand(0); // Let's be deterministic, at least!
+    std::random_shuffle(mc.l.elem.begin(), mc.l.elem.end());
 
-    for(i = 0; i < mc.l.n; i++) {
-        bsp3 = bsp3->Insert(&(mc.l.elem[i]), NULL);
-    }
+    for(STriangle &t : mc.l.elem)
+        bsp3 = bsp3->Insert(t, NULL);
 
     mc.Clear();
     return bsp3;
@@ -45,14 +38,14 @@ Vector SBsp3::IntersectionWith(Vector a, Vector b) {
     return (a.ScaledBy(db/dab)).Plus(b.ScaledBy(-da/dab));
 }
 
-void SBsp3::InsertInPlane(bool pos2, STriangle *tr, SMesh *m) {
-    Vector tc = ((tr->a).Plus(tr->b).Plus(tr->c)).ScaledBy(1.0/3);
+void SBsp3::InsertInPlane(bool pos2, STriangle &tr, SMesh &m) {
+    Vector tc = ((tr.a).Plus(tr.b).Plus(tr.c)).ScaledBy(1.0/3);
 
     bool onFace = false;
     bool sameNormal = false;
     double maxNormalMag = -1;
 
-    Vector lln, trn = tr->Normal();
+    Vector lln, trn = tr.Normal();
 
     SBsp3 *ll = this;
     while(ll) {
@@ -69,20 +62,20 @@ void SBsp3::InsertInPlane(bool pos2, STriangle *tr, SMesh *m) {
         ll = ll->more;
     }
 
-    if(m->flipNormal && ((!pos2 && !onFace) ||
-                                   (onFace && !sameNormal && m->keepCoplanar)))
+    if(m.flipNormal && ((!pos2 && !onFace) ||
+                                   (onFace && !sameNormal && m.keepCoplanar)))
     {
-        m->AddTriangle(tr->meta, tr->c, tr->b, tr->a);
-    } else if(!(m->flipNormal) && ((pos2 && !onFace) ||
-                                   (onFace && sameNormal && m->keepCoplanar)))
+        m.AddTriangle(tr.meta, tr.c, tr.b, tr.a);
+    } else if(!(m.flipNormal) && ((pos2 && !onFace) ||
+                                   (onFace && sameNormal && m.keepCoplanar)))
     {
-        m->AddTriangle(tr->meta, tr->a, tr->b, tr->c);
+        m.AddTriangle(tr.meta, tr.a, tr.b, tr.c);
     } else {
-        m->atLeastOneDiscarded = true;
+        m.atLeastOneDiscarded = true;
     }
 }
 
-void SBsp3::InsertHow(int how, STriangle *tr, SMesh *instead) {
+void SBsp3::InsertHow(InsertMode how, STriangle &tr, SMesh *instead) {
     switch(how) {
         case POS:
             if(instead && !pos) goto alt;
@@ -99,7 +92,7 @@ void SBsp3::InsertHow(int how, STriangle *tr, SMesh *instead) {
             SBsp3 *m = Alloc();
             m->n = n;
             m->d = d;
-            m->tri = *tr;
+            m->tri = tr;
             m->more = more;
             more = m;
             break;
@@ -110,36 +103,36 @@ void SBsp3::InsertHow(int how, STriangle *tr, SMesh *instead) {
 
 alt:
     if(how == POS && !(instead->flipNormal)) {
-        instead->AddTriangle(tr->meta, tr->a, tr->b, tr->c);
+        instead->AddTriangle(tr.meta, tr.a, tr.b, tr.c);
     } else if(how == NEG && instead->flipNormal) {
-        instead->AddTriangle(tr->meta, tr->c, tr->b, tr->a);
+        instead->AddTriangle(tr.meta, tr.c, tr.b, tr.a);
     } else if(how == COPLANAR) {
         if(edges) {
-            edges->InsertTriangle(tr, instead, this);
+            edges->InsertTriangle(tr, *instead, this);
         } else {
             // I suppose this actually is allowed to happen, if the coplanar
             // face is the leaf, and all of its neighbors are earlier in tree?
-            InsertInPlane(false, tr, instead);
+            InsertInPlane(false, tr, *instead);
         }
     } else {
         instead->atLeastOneDiscarded = true;
     }
 }
 
-void SBsp3::InsertConvexHow(int how, STriMeta meta, Vector *vertex, int n,
+void SBsp3::InsertConvexHow(InsertMode how, STriMeta meta, Vector *vertex, int cnt,
                             SMesh *instead)
 {
     switch(how) {
         case POS:
             if(pos) {
-                pos = pos->InsertConvex(meta, vertex, n, instead);
+                pos = pos->InsertConvex(meta, vertex, cnt, instead);
                 return;
             }
             break;
 
         case NEG:
             if(neg) {
-                neg = neg->InsertConvex(meta, vertex, n, instead);
+                neg = neg->InsertConvex(meta, vertex, cnt, instead);
                 return;
             }
             break;
@@ -147,10 +140,10 @@ void SBsp3::InsertConvexHow(int how, STriMeta meta, Vector *vertex, int n,
         default: oops();
     }
     int i;
-    for(i = 0; i < n - 2; i++) {
+    for(i = 0; i < cnt - 2; i++) {
         STriangle tr = STriangle::From(meta,
                                        vertex[0], vertex[i+1], vertex[i+2]);
-        InsertHow(how, &tr, instead);
+        InsertHow(how, tr, instead);
     }
 }
 
@@ -192,7 +185,7 @@ SBsp3 *SBsp3::InsertConvex(STriMeta meta, Vector *vertex, int cnt,
     if(onc == 2) {
         if(!instead) {
             SEdge se = SEdge::From(on[0], on[1]);
-            edges = edges->InsertEdge(&se, n, out);
+            edges = edges->InsertEdge(se, n, out);
         }
     }
 
@@ -239,10 +232,10 @@ SBsp3 *SBsp3::InsertConvex(STriMeta meta, Vector *vertex, int cnt,
     if(!instead) {
         if(inters == 2) {
             SEdge se = SEdge::From(inter[0], inter[1]);
-            edges = edges->InsertEdge(&se, n, out);
+            edges = edges->InsertEdge(se, n, out);
         } else if(inters == 1 && onc == 1) {
             SEdge se = SEdge::From(inter[0], on[0]);
-            edges = edges->InsertEdge(&se, n, out);
+            edges = edges->InsertEdge(se, n, out);
         } else if(inters == 0 && onc == 2) {
             // We already handled this on-plane existing edge
         } else {
@@ -261,31 +254,31 @@ triangulate:
     for(i = 0; i < cnt - 2; i++) {
         STriangle tr = STriangle::From(meta,
                                        vertex[0], vertex[i+1], vertex[i+2]);
-        r = r->Insert(&tr, instead);
+        r = r->Insert(tr, instead);
     }
     return r;
 }
 
-SBsp3 *SBsp3::Insert(STriangle *tr, SMesh *instead) {
+SBsp3 *SBsp3::Insert(STriangle &tr, SMesh *instead) {
     if(!this) {
         if(instead) {
             if(instead->flipNormal) {
                 instead->atLeastOneDiscarded = true;
             } else {
-                instead->AddTriangle(tr->meta, tr->a, tr->b, tr->c);
+                instead->AddTriangle(tr.meta, tr.a, tr.b, tr.c);
             }
             return NULL;
         }
 
         // Brand new node; so allocate for it, and fill us in.
         SBsp3 *r = Alloc();
-        r->n = (tr->Normal()).WithMagnitude(1);
-        r->d = (tr->a).Dot(r->n);
-        r->tri = *tr;
+        r->n = (tr.Normal()).WithMagnitude(1);
+        r->d = (tr.a).Dot(r->n);
+        r->tri = tr;
         return r;
     }
 
-    double dt[3] = { (tr->a).Dot(n), (tr->b).Dot(n), (tr->c).Dot(n) };
+    double dt[3] = { (tr.a).Dot(n), (tr.b).Dot(n), (tr.c).Dot(n) };
 
     int inc = 0, posc = 0, negc = 0;
     bool isPos[3] = {0}, isNeg[3] = {0}, isOn[3] = {0};
@@ -313,13 +306,13 @@ SBsp3 *SBsp3::Insert(STriangle *tr, SMesh *instead) {
     if(posc == 0 || negc == 0) {
         if(inc == 2) {
             Vector a, b;
-            if     (!isOn[0]) { a = tr->b; b = tr->c; }
-            else if(!isOn[1]) { a = tr->c; b = tr->a; }
-            else if(!isOn[2]) { a = tr->a; b = tr->b; }
+            if     (!isOn[0]) { a = tr.b; b = tr.c; }
+            else if(!isOn[1]) { a = tr.c; b = tr.a; }
+            else if(!isOn[2]) { a = tr.a; b = tr.b; }
             else oops();
             if(!instead) {
                 SEdge se = SEdge::From(a, b);
-                edges = edges->InsertEdge(&se, n, tr->Normal());
+                edges = edges->InsertEdge(se, n, tr.Normal());
             }
         }
 
@@ -337,26 +330,26 @@ SBsp3 *SBsp3::Insert(STriangle *tr, SMesh *instead) {
     if(posc == 1 && negc == 1 && inc == 1) {
         bool bpos;
         // Standardize so that a is on the plane
-        if       (isOn[0]) { a = tr->a; b = tr->b; c = tr->c; bpos = isPos[1];
-        } else if(isOn[1]) { a = tr->b; b = tr->c; c = tr->a; bpos = isPos[2];
-        } else if(isOn[2]) { a = tr->c; b = tr->a; c = tr->b; bpos = isPos[0];
+        if       (isOn[0]) { a = tr.a; b = tr.b; c = tr.c; bpos = isPos[1];
+        } else if(isOn[1]) { a = tr.b; b = tr.c; c = tr.a; bpos = isPos[2];
+        } else if(isOn[2]) { a = tr.c; b = tr.a; c = tr.b; bpos = isPos[0];
         } else oops();
 
         Vector bPc = IntersectionWith(b, c);
-        STriangle btri = STriangle::From(tr->meta, a, b, bPc);
-        STriangle ctri = STriangle::From(tr->meta, c, a, bPc);
+        STriangle btri = STriangle::From(tr.meta, a, b, bPc);
+        STriangle ctri = STriangle::From(tr.meta, c, a, bPc);
 
         if(bpos) {
-            InsertHow(POS, &btri, instead);
-            InsertHow(NEG, &ctri, instead);
+            InsertHow(POS, btri, instead);
+            InsertHow(NEG, ctri, instead);
         } else {
-            InsertHow(POS, &ctri, instead);
-            InsertHow(NEG, &btri, instead);
+            InsertHow(POS, ctri, instead);
+            InsertHow(NEG, btri, instead);
         }
 
         if(!instead) {
             SEdge se = SEdge::From(a, bPc);
-            edges = edges->InsertEdge(&se, n, tr->Normal());
+            edges = edges->InsertEdge(se, n, tr.Normal());
         }
 
         return this;
@@ -364,40 +357,40 @@ SBsp3 *SBsp3::Insert(STriangle *tr, SMesh *instead) {
 
     if(posc == 2 && negc == 1) {
         // Standardize so that a is on one side, and b and c are on the other.
-        if       (isNeg[0]) {   a = tr->a; b = tr->b; c = tr->c;
-        } else if(isNeg[1]) {   a = tr->b; b = tr->c; c = tr->a;
-        } else if(isNeg[2]) {   a = tr->c; b = tr->a; c = tr->b;
+        if       (isNeg[0]) {   a = tr.a; b = tr.b; c = tr.c;
+        } else if(isNeg[1]) {   a = tr.b; b = tr.c; c = tr.a;
+        } else if(isNeg[2]) {   a = tr.c; b = tr.a; c = tr.b;
         } else oops();
 
     } else if(posc == 1 && negc == 2) {
-        if       (isPos[0]) {   a = tr->a; b = tr->b; c = tr->c;
-        } else if(isPos[1]) {   a = tr->b; b = tr->c; c = tr->a;
-        } else if(isPos[2]) {   a = tr->c; b = tr->a; c = tr->b;
+        if       (isPos[0]) {   a = tr.a; b = tr.b; c = tr.c;
+        } else if(isPos[1]) {   a = tr.b; b = tr.c; c = tr.a;
+        } else if(isPos[2]) {   a = tr.c; b = tr.a; c = tr.b;
         } else oops();
     } else oops();
 
     Vector aPb = IntersectionWith(a, b);
     Vector cPa = IntersectionWith(c, a);
 
-    STriangle alone = STriangle::From(tr->meta, a, aPb, cPa);
+    STriangle alone = STriangle::From(tr.meta, a, aPb, cPa);
     Vector quad[4] = { aPb, b, c, cPa };
 
     if(posc == 2 && negc == 1) {
-        InsertConvexHow(POS, tr->meta, quad, 4, instead);
-        InsertHow(NEG, &alone, instead);
+        InsertConvexHow(POS, tr.meta, quad, 4, instead);
+        InsertHow(NEG, alone, instead);
     } else {
-        InsertConvexHow(NEG, tr->meta, quad, 4, instead);
-        InsertHow(POS, &alone, instead);
+        InsertConvexHow(NEG, tr.meta, quad, 4, instead);
+        InsertHow(POS, alone, instead);
     }
     if(!instead) {
         SEdge se = SEdge::From(aPb, cPa);
-        edges = edges->InsertEdge(&se, n, alone.Normal());
+        edges = edges->InsertEdge(se, n, alone.Normal());
     }
 
     return this;
 }
 
-void SBsp3::GenerateInPaintOrder(SMesh *m) {
+void SBsp3::GenerateInPaintOrder(SMesh &m) {
     if(!this) return;
 
     // Doesn't matter which branch we take if the normal has zero z
@@ -410,7 +403,7 @@ void SBsp3::GenerateInPaintOrder(SMesh *m) {
 
     SBsp3 *flip = this;
     while(flip) {
-        m->AddTriangle(&(flip->tri));
+        m.AddTriangle(flip->tri);
         flip = flip->more;
     }
 
@@ -475,21 +468,21 @@ Vector SBsp2::IntersectionWith(Vector a, Vector b) {
     return (a.ScaledBy(db/dab)).Plus(b.ScaledBy(-da/dab));
 }
 
-SBsp2 *SBsp2::InsertEdge(SEdge *nedge, Vector nnp, Vector out) {
+SBsp2 *SBsp2::InsertEdge(SEdge &nedge, Vector nnp, Vector out) {
     if(!this) {
         // Brand new node; so allocate for it, and fill us in.
         SBsp2 *r = Alloc();
         r->np = nnp;
-        r->no = ((r->np).Cross((nedge->b).Minus(nedge->a))).WithMagnitude(1);
+        r->no = ((r->np).Cross((nedge.b).Minus(nedge.a))).WithMagnitude(1);
         if(out.Dot(r->no) < 0) {
             r->no = (r->no).ScaledBy(-1);
         }
-        r->d = (nedge->a).Dot(r->no);
-        r->edge = *nedge;
+        r->d = (nedge.a).Dot(r->no);
+        r->edge = nedge;
         return r;
     }
 
-    double dt[2] = { (nedge->a).Dot(no), (nedge->b).Dot(no) };
+    double dt[2] = { (nedge.a).Dot(no), (nedge.b).Dot(no) };
 
     bool isPos[2] = {0}, isNeg[2] = {0}, isOn[2] = {0};
     for(int i = 0; i < 2; i++) {
@@ -514,36 +507,36 @@ SBsp2 *SBsp2::InsertEdge(SEdge *nedge, Vector nnp, Vector out) {
         SBsp2 *m = Alloc();
 
         m->np = nnp;
-        m->no = ((m->np).Cross((nedge->b).Minus(nedge->a))).WithMagnitude(1);
+        m->no = ((m->np).Cross((nedge.b).Minus(nedge.a))).WithMagnitude(1);
         if(out.Dot(m->no) < 0) {
             m->no = (m->no).ScaledBy(-1);
         }
-        m->d = (nedge->a).Dot(m->no);
-        m->edge = *nedge;
+        m->d = (nedge.a).Dot(m->no);
+        m->edge = nedge;
 
         m->more = more;
         more = m;
         return this;
     }
     if((isPos[0] && isNeg[1]) || (isNeg[0] && isPos[1])) {
-        Vector aPb = IntersectionWith(nedge->a, nedge->b);
+        Vector aPb = IntersectionWith(nedge.a, nedge.b);
 
-        SEdge ea = SEdge::From(nedge->a, aPb);
-        SEdge eb = SEdge::From(aPb, nedge->b);
+        SEdge ea = SEdge::From(nedge.a, aPb);
+        SEdge eb = SEdge::From(aPb, nedge.b);
 
         if(isPos[0]) {
-            pos = pos->InsertEdge(&ea, nnp, out);
-            neg = neg->InsertEdge(&eb, nnp, out);
+            pos = pos->InsertEdge(ea, nnp, out);
+            neg = neg->InsertEdge(eb, nnp, out);
         } else {
-            neg = neg->InsertEdge(&ea, nnp, out);
-            pos = pos->InsertEdge(&eb, nnp, out);
+            neg = neg->InsertEdge(ea, nnp, out);
+            pos = pos->InsertEdge(eb, nnp, out);
         }
         return this;
     }
     oops();
 }
 
-void SBsp2::InsertTriangleHow(int how, STriangle *tr, SMesh *m, SBsp3 *bsp3) {
+void SBsp2::InsertTriangleHow(InsertMode how, STriangle &tr, SMesh &m, SBsp3 *bsp3) {
     switch(how) {
         case POS:
             if(pos) {
@@ -565,8 +558,8 @@ void SBsp2::InsertTriangleHow(int how, STriangle *tr, SMesh *m, SBsp3 *bsp3) {
     }
 }
 
-void SBsp2::InsertTriangle(STriangle *tr, SMesh *m, SBsp3 *bsp3) {
-    double dt[3] = { (tr->a).Dot(no), (tr->b).Dot(no), (tr->c).Dot(no) };
+void SBsp2::InsertTriangle(STriangle &tr, SMesh &m, SBsp3 *bsp3) {
+    double dt[3] = { (tr.a).Dot(no), (tr.b).Dot(no), (tr.c).Dot(no) };
 
     bool isPos[3] = {0}, isNeg[3] = {0}, isOn[3] = {0};
     int inc = 0, posc = 0, negc = 0;
@@ -604,21 +597,21 @@ void SBsp2::InsertTriangle(STriangle *tr, SMesh *m, SBsp3 *bsp3) {
     if(posc == 1 && negc == 1 && inc == 1) {
         bool bpos;
         // Standardize so that a is on the plane
-        if       (isOn[0]) { a = tr->a; b = tr->b; c = tr->c; bpos = isPos[1];
-        } else if(isOn[1]) { a = tr->b; b = tr->c; c = tr->a; bpos = isPos[2];
-        } else if(isOn[2]) { a = tr->c; b = tr->a; c = tr->b; bpos = isPos[0];
+        if       (isOn[0]) { a = tr.a; b = tr.b; c = tr.c; bpos = isPos[1];
+        } else if(isOn[1]) { a = tr.b; b = tr.c; c = tr.a; bpos = isPos[2];
+        } else if(isOn[2]) { a = tr.c; b = tr.a; c = tr.b; bpos = isPos[0];
         } else oops();
 
         Vector bPc = IntersectionWith(b, c);
-        STriangle btri = STriangle::From(tr->meta, a, b, bPc);
-        STriangle ctri = STriangle::From(tr->meta, c, a, bPc);
+        STriangle btri = STriangle::From(tr.meta, a, b, bPc);
+        STriangle ctri = STriangle::From(tr.meta, c, a, bPc);
 
         if(bpos) {
-            InsertTriangleHow(POS, &btri, m, bsp3);
-            InsertTriangleHow(NEG, &ctri, m, bsp3);
+            InsertTriangleHow(POS, btri, m, bsp3);
+            InsertTriangleHow(NEG, ctri, m, bsp3);
         } else {
-            InsertTriangleHow(POS, &ctri, m, bsp3);
-            InsertTriangleHow(NEG, &btri, m, bsp3);
+            InsertTriangleHow(POS, ctri, m, bsp3);
+            InsertTriangleHow(NEG, btri, m, bsp3);
         }
 
         return;
@@ -626,33 +619,33 @@ void SBsp2::InsertTriangle(STriangle *tr, SMesh *m, SBsp3 *bsp3) {
 
     if(posc == 2 && negc == 1) {
         // Standardize so that a is on one side, and b and c are on the other.
-        if       (isNeg[0]) {   a = tr->a; b = tr->b; c = tr->c;
-        } else if(isNeg[1]) {   a = tr->b; b = tr->c; c = tr->a;
-        } else if(isNeg[2]) {   a = tr->c; b = tr->a; c = tr->b;
+        if       (isNeg[0]) {   a = tr.a; b = tr.b; c = tr.c;
+        } else if(isNeg[1]) {   a = tr.b; b = tr.c; c = tr.a;
+        } else if(isNeg[2]) {   a = tr.c; b = tr.a; c = tr.b;
         } else oops();
 
     } else if(posc == 1 && negc == 2) {
-        if       (isPos[0]) {   a = tr->a; b = tr->b; c = tr->c;
-        } else if(isPos[1]) {   a = tr->b; b = tr->c; c = tr->a;
-        } else if(isPos[2]) {   a = tr->c; b = tr->a; c = tr->b;
+        if       (isPos[0]) {   a = tr.a; b = tr.b; c = tr.c;
+        } else if(isPos[1]) {   a = tr.b; b = tr.c; c = tr.a;
+        } else if(isPos[2]) {   a = tr.c; b = tr.a; c = tr.b;
         } else oops();
     } else oops();
 
     Vector aPb = IntersectionWith(a, b);
     Vector cPa = IntersectionWith(c, a);
 
-    STriangle alone = STriangle::From(tr->meta, a,   aPb, cPa);
-    STriangle quad1 = STriangle::From(tr->meta, aPb, b,   c  );
-    STriangle quad2 = STriangle::From(tr->meta, aPb, c,   cPa);
+    STriangle alone = STriangle::From(tr.meta, a,   aPb, cPa);
+    STriangle quad1 = STriangle::From(tr.meta, aPb, b,   c  );
+    STriangle quad2 = STriangle::From(tr.meta, aPb, c,   cPa);
 
     if(posc == 2 && negc == 1) {
-        InsertTriangleHow(POS, &quad1, m, bsp3);
-        InsertTriangleHow(POS, &quad2, m, bsp3);
-        InsertTriangleHow(NEG, &alone, m, bsp3);
+        InsertTriangleHow(POS, quad1, m, bsp3);
+        InsertTriangleHow(POS, quad2, m, bsp3);
+        InsertTriangleHow(NEG, alone, m, bsp3);
     } else {
-        InsertTriangleHow(NEG, &quad1, m, bsp3);
-        InsertTriangleHow(NEG, &quad2, m, bsp3);
-        InsertTriangleHow(POS, &alone, m, bsp3);
+        InsertTriangleHow(NEG, quad1, m, bsp3);
+        InsertTriangleHow(NEG, quad2, m, bsp3);
+        InsertTriangleHow(POS, alone, m, bsp3);
     }
 
     return;

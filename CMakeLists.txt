@@ -35,7 +35,7 @@ if(WIN32)
         -DWIN32=1
         -DWIN32_LEAN_AND_MEAN=1)
 else()
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-variable -std=c++11")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-variable -Wno-undefined-bool-conversion -std=c++11")
 endif()
 
 if((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)

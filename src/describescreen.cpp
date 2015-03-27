@@ -23,7 +23,7 @@ void TextWindow::ScreenEditTtfText(int link, uint32_t v) {
 void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
     int i = (int)v;
     if(i < 0) return;
-    if(i >= SS.fonts.l.n) return;
+    if(i >= SS.fonts.l.Size()) return;
 
     SS.GW.GroupSelection();
     if(gs.entities != 1 || gs.n != 1) return;
@@ -54,7 +54,6 @@ void TextWindow::ScreenConstraintShowAsRadius(int link, uint32_t v) {
 void TextWindow::DescribeSelection(void) {
     Entity *e;
     Vector p;
-    int i;
     Printf(false, "");
 
     if(gs.n == 1 && (gs.points == 1 || gs.entities == 1)) {
@@ -124,7 +123,7 @@ void TextWindow::DescribeSelection(void) {
                     Printf(false, "%FtCUBIC BEZIER CURVE%E");
                     pts = 4;
                 }
-                for(i = 0; i < pts; i++) {
+                for(int i = 0; i < pts; i++) {
                     p = SK.GetEntity(e->point[i])->PointGetNum();
                     Printf((i==0), "   p%d = " PT_AS_STR, i, COSTR(p));
                 }
@@ -175,20 +174,20 @@ void TextWindow::DescribeSelection(void) {
                         e->str.str, &ScreenEditTtfText, e->h.request());
                     Printf(true, "  select new font");
                     SS.fonts.LoadAll();
-                    int i;
-                    for(i = 0; i < SS.fonts.l.n; i++) {
-                        TtfFont *tf = &(SS.fonts.l.elem[i]);
-                        if(strcmp(e->font.str, tf->FontFileBaseName())==0) {
+                    int i = 0;
+                    for(TtfFont &tf : SS.fonts.l) {
+                        if(strcmp(e->font.str, tf.FontFileBaseName())==0) {
                             Printf(false, "%Bp    %s",
                                 (i & 1) ? 'd' : 'a',
-                                tf->name.str);
+                                tf.name.str);
                         } else {
                             Printf(false, "%Bp    %f%D%Fl%Ll%s%E%Bp",
                                 (i & 1) ? 'd' : 'a',
                                 &ScreenSetTtfFont, i,
-                                tf->name.str,
+                                tf.name.str,
                                 (i & 1) ? 'd' : 'a');
                         }
+                        i++;
                     }
                 } else {
                     Printf(false, "  text = '%Fi%s%E'", e->str.str);
@@ -314,7 +313,7 @@ void TextWindow::DescribeSelection(void) {
                 c->DescriptionString());
         }
     } else {
-        int n = SS.GW.selection.n;
+        int n = SS.GW.selection.Size();
         Printf(false, "%FtSELECTED:%E %d item%s", n, n == 1 ? "" : "s");
     }
 
@@ -332,13 +331,13 @@ void TextWindow::DescribeSelection(void) {
     // If any of the selected entities have an assigned style, then offer
     // the option to remove that style.
     bool styleAssigned = false;
-    for(i = 0; i < gs.entities; i++) {
+    for(int i = 0; i < gs.entities; i++) {
         Entity *e = SK.GetEntity(gs.entity[i]);
         if(e->style.v != 0) {
             styleAssigned = true;
         }
     }
-    for(i = 0; i < gs.constraints; i++) {
+    for(int i = 0; i < gs.constraints; i++) {
         Constraint *c = SK.GetConstraint(gs.constraint[i]);
         if(c->type == Constraint::COMMENT && c->disp.style.v != 0) {
             styleAssigned = true;

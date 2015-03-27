@@ -15,9 +15,7 @@ void Group::AssembleLoops(bool *allClosed,
 {
     SBezierList sbl = {};
 
-    int i;
-    for(i = 0; i < SK.entity.n; i++) {
-        Entity *e = &(SK.entity.elem[i]);
+    for(Entity *e : SK.entity) {
         if(e->group.v != h.v) continue;
         if(e->construction) continue;
         if(e->forceHidden) continue;
@@ -25,18 +23,18 @@ void Group::AssembleLoops(bool *allClosed,
         e->GenerateBezierCurves(&sbl);
     }
 
-    SBezier *sb;
     *allNonZeroLen = true;
-    for(sb = sbl.l.First(); sb; sb = sbl.l.NextAfter(sb)) {
-        for(i = 1; i <= sb->deg; i++) {
-            if(!(sb->ctrl[i]).Equals(sb->ctrl[0])) {
+    for(SBezier &sb : sbl.l) {
+        int i;
+        for(i = 1; i <= sb.deg; i++) {
+            if(!(sb.ctrl[i]).Equals(sb.ctrl[0])) {
                 break;
             }
         }
-        if(i > sb->deg) {
+        if(i > sb.deg) {
             // This is a zero-length edge.
             *allNonZeroLen = false;
-            polyError.errorPointAt = sb->ctrl[0];
+            polyError.errorPointAt = sb.ctrl[0];
             goto done;
         }
     }
@@ -44,11 +42,11 @@ void Group::AssembleLoops(bool *allClosed,
     // Try to assemble all these Beziers into loops. The closed loops go into
     // bezierLoops, with the outer loops grouped with their holes. The
     // leftovers, if any, go in bezierOpens.
-    bezierLoops.FindOuterFacesFrom(&sbl, &polyLoops, NULL,
+    bezierLoops.FindOuterFacesFrom(sbl, polyLoops, NULL,
                                    SS.ChordTolMm(),
-                                   allClosed, &(polyError.notClosedAt),
-                                   allCoplanar, &(polyError.errorPointAt),
-                                   &bezierOpens);
+                                   allClosed, polyError.notClosedAt,
+                                   allCoplanar, polyError.errorPointAt,
+                                   bezierOpens);
     done:
     sbl.Clear();
 }
@@ -94,8 +92,7 @@ void SShell::RemapFaces(Group *g, int remap) {
 }
 
 void SMesh::RemapFaces(Group *g, int remap) {
-    STriangle *tr;
-    for(tr = l.First(); tr; tr = l.NextAfter(tr)) {
+    for(STriangle *tr : l) {
         hEntity face = { tr->meta.face };
         if(face.v == Entity::NO_ENTITY.v) continue;
 
@@ -251,8 +248,7 @@ void Group::GenerateShellAndMesh(void) {
                 // So these are the sides
                 if(ss->degm != 1 || ss->degn != 1) continue;
 
-                Entity *e;
-                for(e = SK.entity.First(); e; e = SK.entity.NextAfter(e)) {
+                for(Entity *e : SK.entity) {
                     if(e->group.v != opA.v) continue;
                     if(e->type != Entity::LINE_SEGMENT) continue;
 
@@ -390,8 +386,7 @@ void Group::GenerateDisplayItems(void) {
             // shell, and edge-find the mesh.
             displayMesh.Clear();
             runningShell.TriangulateInto(&displayMesh);
-            STriangle *t;
-            for(t = runningMesh.l.First(); t; t = runningMesh.l.NextAfter(t)) {
+            for(STriangle *t : runningMesh.l) {
                 STriangle trn = *t;
                 Vector n = trn.Normal();
                 trn.an = n;
@@ -413,9 +408,7 @@ void Group::GenerateDisplayItems(void) {
 }
 
 Group *Group::PreviousGroup(void) {
-    int i;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    for(Group *g : SK.group) {
         if(g->h.v == h.v) break;
     }
     if(i == 0 || i >= SK.group.n) return NULL;
@@ -550,8 +543,8 @@ void Group::DrawFilledPaths(void) {
         if(sbls->l.n == 0 || sbls->l.elem[0].l.n == 0) continue;
         // In an assembled loop, all the styles should be the same; so doesn't
         // matter which one we grab.
-        SBezier *sb = &(sbls->l.elem[0].l.elem[0]);
-        hStyle hs = { (uint32_t)sb->auxA };
+        SBezier &sb = sbls->l.elem[0].l.elem[0];
+        hStyle hs = { (uint32_t)sb.auxA };
         Style *s = Style::Get(hs);
         if(s->filled) {
             // This is a filled loop, where the user specified a fill color.

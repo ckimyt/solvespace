@@ -21,8 +21,7 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
 
         // Find a top-level contour, and start with that. Then build bridges
         // in order to merge all its islands into a single contour.
-        SContour *top;
-        for(top = l.First(); top; top = l.NextAfter(top)) {
+        for(SContour *top : l) {
             if(top->timesEnclosed == 0) {
                 break;
             }
@@ -47,8 +46,7 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
         // outer contours that lie entirely within this contour, and any
         // holes for those contours. But that's okay, because we can merge
         // those too.
-        SContour *sc;
-        for(sc = l.First(); sc; sc = l.NextAfter(sc)) {
+        for(SContour *sc : l) {
             if(sc->timesEnclosed != 1) continue;
             if(sc->l.n < 2) continue;
 
@@ -205,8 +203,8 @@ haveEdge:
     // and future bridges mustn't cross our bridge, and it's tricky to get
     // things right if two bridges come from the same point
     avoidEdges->AddEdge(a, b);
-    avoidPts->Add(&a);
-    avoidPts->Add(&b);
+    avoidPts->Add(a);
+    avoidPts->Add(b);
 
     l.Clear();
     l = merged.l;
@@ -411,7 +409,7 @@ void SSurface::MakeTriangulationGridInto(List<double> *l, double vs, double vf,
 
     double step = 1.0/SS.maxSegments;
     if((vf - vs) < step || worst < SS.ChordTolMm()) {
-        l->Add(&vf);
+        l->Add(vf);
     } else {
         MakeTriangulationGridInto(l, vs, (vs+vf)/2, swapped);
         MakeTriangulationGridInto(l, (vs+vf)/2, vf, swapped);
@@ -433,9 +431,9 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
     li = {};
     lj = {};
     double v = 0;
-    li.Add(&v);
+    li.Add(v);
     srf->MakeTriangulationGridInto(&li, 0, 1, true);
-    lj.Add(&v);
+    lj.Add(v);
     srf->MakeTriangulationGridInto(&lj, 0, 1, false);
 
     // Now iterate over each quad in the grid. If it's outside the polygon,
@@ -488,8 +486,7 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
     SPolygon hp = {};
     holes.AssemblePolygon(&hp, NULL, true);
 
-    SContour *sc;
-    for(sc = hp.l.First(); sc; sc = hp.l.NextAfter(sc)) {
+    for(SContour *sc : hp.l) {
         l.Add(sc);
     }
 

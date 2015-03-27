@@ -57,8 +57,7 @@ void SShell::MergeCoincidentSurfaces(void) {
 
                 // All the references to this surface get replaced with the
                 // new srf
-                SCurve *sc;
-                for(sc = curve.First(); sc; sc = curve.NextAfter(sc)) {
+                for(SCurve *sc : curve) {
                     if(sc->surfA.v == sj->h.v) sc->surfA = si->h;
                     if(sc->surfB.v == sj->h.v) sc->surfB = si->h;
                 }
@@ -85,8 +84,7 @@ void SShell::MergeCoincidentSurfaces(void) {
 
             double umax = VERY_NEGATIVE, umin = VERY_POSITIVE,
                    vmax = VERY_NEGATIVE, vmin = VERY_POSITIVE;
-            SEdge *se;
-            for(se = sel.l.First(); se; se = sel.l.NextAfter(se)) {
+            for(SEdge *se : sel.l) {
                 double ut = (se->a).Dot(u), vt = (se->a).Dot(v);
                 umax = max(umax, ut);
                 vmax = max(vmax, vt);

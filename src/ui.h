@@ -490,14 +490,14 @@ public:
     void NormalizeProjectionVectors(void);
     Point2d ProjectPoint(Vector p);
     Vector ProjectPoint3(Vector p);
-    Vector ProjectPoint4(Vector p, double *w);
+    Vector ProjectPoint4(Vector p, double &w);
     Vector UnProjectPoint(Point2d p);
     void AnimateOnto(Quaternion quatf, Vector offsetf);
     void AnimateOntoWorkplane(void);
     Vector VectorFromProjs(Vector rightUpForward);
-    void HandlePointForZoomToFit(Vector p, Point2d *pmax, Point2d *pmin,
-                                           double *wmin, bool div);
-    void LoopOverPoints(Point2d *pmax, Point2d *pmin, double *wmin, bool div,
+    void HandlePointForZoomToFit(Vector p, Point2d &pmax, Point2d &pmin,
+                                           double &wmin, bool div);
+    void LoopOverPoints(Point2d &pmax, Point2d &pmin, double &wmin, bool div,
                             bool includingInvisibles);
     void ZoomToFit(bool includingInvisibles);
 

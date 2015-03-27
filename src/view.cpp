@@ -66,7 +66,7 @@ void TextWindow::ScreenChangeViewProjection(int link, uint32_t v) {
 bool TextWindow::EditControlDoneForView(const char *s) {
     switch(edit.meaning) {
         case EDIT_VIEW_SCALE: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double v =  e->Eval() / SS.MmPerUnit();
                 if(v > LENGTH_EPS) {

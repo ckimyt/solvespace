@@ -55,9 +55,7 @@ void TextWindow::ScreenToggleGroupShown(int link, uint32_t v) {
     SS.GenerateAll();
 }
 void TextWindow::ScreenShowGroupsSpecial(int link, uint32_t v) {
-    int i;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    for(Group *g : SK.group) {
 
         if(link == 's') {
             g->visible = true;
@@ -106,8 +104,7 @@ void TextWindow::ShowListOfGroups(void) {
     Printf(false, "%Ft    shown ok  group-name%E");
     int i;
     bool afterActive = false;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    for(Group *g : SK.group) {
         char *s = g->DescriptionString();
         bool active = (g->h.v == SS.GW.activeGroup.v);
         bool shown = g->visible;
@@ -177,14 +174,14 @@ void TextWindow::ScreenSelectConstraint(int link, uint32_t v) {
     SS.GW.ClearSelection();
     GraphicsWindow::Selection sel = {};
     sel.constraint.v = v;
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.Add(sel);
 }
 void TextWindow::ScreenSelectRequest(int link, uint32_t v) {
     SS.GW.ClearSelection();
     GraphicsWindow::Selection sel = {};
     hRequest hr = { v };
     sel.entity = hr.entity(0);
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.Add(sel);
 }
 
 void TextWindow::ScreenChangeGroupOption(int link, uint32_t v) {
@@ -422,8 +419,7 @@ list_items:
     Printf(false, "%Ft requests in group");
 
     int i, a = 0;
-    for(i = 0; i < SK.request.n; i++) {
-        Request *r = &(SK.request.elem[i]);
+    for(Request *r : SK.request) {
 
         if(r->group.v == shown.group.v) {
             char *s = r->DescriptionString();
@@ -439,8 +435,7 @@ list_items:
     a = 0;
     Printf(false, "");
     Printf(false, "%Ft constraints in group (%d DOF)", g->solved.dof);
-    for(i = 0; i < SK.constraint.n; i++) {
-        Constraint *c = &(SK.constraint.elem[i]);
+    for(Constraint *c : SK.constraint) {
 
         if(c->group.v == shown.group.v) {
             char *s = c->DescriptionString();
@@ -626,7 +621,7 @@ void TextWindow::EditControlDone(const char *s) {
 
     switch(edit.meaning) {
         case EDIT_TIMES_REPEATED: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 SS.UndoRemember();
 
@@ -676,7 +671,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_GROUP_SCALE: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double ev = e->Eval();
                 if(fabs(ev) < 1e-6) {
@@ -708,7 +703,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_GROUP_OPACITY: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double alpha = e->Eval();
                 if(alpha < 0 || alpha > 1) {
@@ -734,7 +729,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_STEP_DIM_FINISH: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(!e) {
                 break;
             }
@@ -750,7 +745,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
 
         case EDIT_TANGENT_ARC_RADIUS: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(!e) break;
             if(e->Eval() < LENGTH_EPS) {
                 Error("Radius cannot be zero or negative.");

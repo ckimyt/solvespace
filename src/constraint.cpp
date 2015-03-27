@@ -60,16 +60,12 @@ char *Constraint::DescriptionString(void) {
 //-----------------------------------------------------------------------------
 void Constraint::DeleteAllConstraintsFor(int type, hEntity entityA, hEntity ptA)
 {
-    SK.constraint.ClearTags();
-    for(int i = 0; i < SK.constraint.n; i++) {
-        ConstraintBase *ct = &(SK.constraint.elem[i]);
-        if(ct->type != type) continue;
-
-        if(ct->entityA.v != entityA.v) continue;
-        if(ct->ptA.v != ptA.v) continue;
-        ct->tag = 1;
-    }
-    SK.constraint.RemoveTagged();
+    SK.constraint.RemoveIf([type, entityA, ptA](const ConstraintBase &ct) {
+        if(ct.type != type) return false;
+        if(ct.entityA.v != entityA.v) return false;
+        if(ct.ptA.v != ptA.v) return false;
+        return true;
+    });
     // And no need to do anything special, since nothing
     // ever depends on a constraint. But do clear the
     // hover, in case the just-deleted constraint was
@@ -77,15 +73,12 @@ void Constraint::DeleteAllConstraintsFor(int type, hEntity entityA, hEntity ptA)
     SS.GW.hover.Clear();
 }
 
-void Constraint::AddConstraint(Constraint *c) {
-    AddConstraint(c, true);
-}
-void Constraint::AddConstraint(Constraint *c, bool rememberForUndo) {
+void Constraint::AddConstraint(Constraint &c, bool rememberForUndo) {
     if(rememberForUndo) SS.UndoRemember();
 
     SK.constraint.AddAndAssignId(c);
 
-    SS.MarkGroupDirty(c->group);
+    SS.MarkGroupDirty(c.group);
     SS.ScheduleGenerateAll();
 }
 
@@ -103,7 +96,7 @@ void Constraint::Constrain(int type, hEntity ptA, hEntity ptB,
     c.entityB = entityB;
     c.other = other;
     c.other2 = other2;
-    AddConstraint(&c, false);
+    AddConstraint(c, false);
 }
 void Constraint::Constrain(int type, hEntity ptA, hEntity ptB, hEntity entityA){
     Constrain(type, ptA, ptB, entityA, Entity::NO_ENTITY, false, false);
@@ -177,7 +170,7 @@ void Constraint::MenuConstrain(int id) {
 
             c.valA = 0;
             c.ModifyToSatisfy();
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
         }
 
@@ -212,7 +205,7 @@ void Constraint::MenuConstrain(int id) {
                       "    * a point and a plane face (point on face)\n");
                 return;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_EQUAL:
@@ -295,7 +288,7 @@ void Constraint::MenuConstrain(int id) {
                     c.other = true;
                 }
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_RATIO:
@@ -312,7 +305,7 @@ void Constraint::MenuConstrain(int id) {
 
             c.valA = 0;
             c.ModifyToSatisfy();
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_AT_MIDPOINT:
@@ -338,7 +331,7 @@ void Constraint::MenuConstrain(int id) {
                             "(line's midpoint on plane)\n");
                 return;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_SYMMETRIC:
@@ -424,7 +417,7 @@ void Constraint::MenuConstrain(int id) {
                 // Symmetry with a symmetry plane specified explicitly.
                 c.type = SYMMETRIC;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_VERTICAL:
@@ -454,7 +447,7 @@ void Constraint::MenuConstrain(int id) {
             } else {
                 c.type = VERTICAL;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
         }
 
@@ -496,7 +489,7 @@ void Constraint::MenuConstrain(int id) {
 
                 nfree->NormalForceTo(Quaternion::From(fu, fv));
             }
-            AddConstraint(&c, false);
+            AddConstraint(c, false);
             break;
         }
 
@@ -567,7 +560,7 @@ void Constraint::MenuConstrain(int id) {
                 }
             }
             c.ModifyToSatisfy();
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
         }
 
@@ -662,7 +655,7 @@ void Constraint::MenuConstrain(int id) {
                             "an endpoint (tangent)\n");
                 return;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_PERPENDICULAR:
@@ -678,7 +671,7 @@ void Constraint::MenuConstrain(int id) {
                       "    * two normals\n");
                 return;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_WHERE_DRAGGED:
@@ -691,7 +684,7 @@ void Constraint::MenuConstrain(int id) {
                       "    * a point\n");
                 return;
             }
-            AddConstraint(&c);
+            AddConstraint(c);
             break;
 
         case GraphicsWindow::MNU_COMMENT:

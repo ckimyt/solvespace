@@ -47,8 +47,7 @@ void SolveSpaceUI::PushFromCurrentOnto(UndoStack *uk) {
 
     UndoState *ut = &(uk->d[uk->write]);
     *ut = {};
-    for(i = 0; i < SK.group.n; i++) {
-        Group *src = &(SK.group.elem[i]);
+    for(Group &src : SK.group) {
         Group dest = *src;
         // And then clean up all the stuff that needs to be a deep copy,
         // and zero out all the dynamic stuff that will get regenerated.
@@ -71,22 +70,21 @@ void SolveSpaceUI::PushFromCurrentOnto(UndoStack *uk) {
         dest.impMesh = {};
         dest.impShell = {};
         dest.impEntity = {};
-        ut->group.Add(&dest);
+        ut->group.Add(dest);
     }
     for(i = 0; i < SK.request.n; i++) {
-        ut->request.Add(&(SK.request.elem[i]));
+        ut->request.Add((SK.request.elem[i]));
     }
-    for(i = 0; i < SK.constraint.n; i++) {
-        Constraint *src = &(SK.constraint.elem[i]);
+    for(Constraint &src : SK.constraint) {
         Constraint dest = *src;
         dest.dogd = {};
-        ut->constraint.Add(&dest);
+        ut->constraint.Add(dest);
     }
     for(i = 0; i < SK.param.n; i++) {
-        ut->param.Add(&(SK.param.elem[i]));
+        ut->param.Add((SK.param.elem[i]));
     }
     for(i = 0; i < SK.style.n; i++) {
-        ut->style.Add(&(SK.style.elem[i]));
+        ut->style.Add((SK.style.elem[i]));
     }
     ut->activeGroup = SS.GW.activeGroup;
 
@@ -101,8 +99,7 @@ void SolveSpaceUI::PopOntoCurrentFrom(UndoStack *uk) {
     UndoState *ut = &(uk->d[uk->write]);
 
     // Free everything in the main copy of the program before replacing it
-    Group *g;
-    for(g = SK.group.First(); g; g = SK.group.NextAfter(g)) {
+    for(Group *g : SK.group) {
         g->Clear();
     }
     SK.group.Clear();
@@ -142,8 +139,7 @@ void SolveSpaceUI::UndoClearStack(UndoStack *uk) {
 
 void SolveSpaceUI::UndoClearState(UndoState *ut) {
     int i;
-    for(i = 0; i < ut->group.n; i++) {
-        Group *g = &(ut->group.elem[i]);
+    for(Group &g : ut->group) {
 
         g->remap.Clear();
     }

@@ -75,7 +75,7 @@ void SolveSpaceUI::ExportSectionTo(const char *filename) {
     SBezierList bl = {};
 
     // If there's a mesh, then grab the edges from it.
-    g->runningMesh.MakeEdgesInPlaneInto(&el, n, d);
+    g->runningMesh.MakeEdgesInPlaneInto(el, n, d);
 
     // If there's a shell, then grab the edges and possibly Beziers.
     g->runningShell.MakeSectionEdgesInto(n, d,
@@ -83,14 +83,11 @@ void SolveSpaceUI::ExportSectionTo(const char *filename) {
        (SS.exportPwlCurves || fabs(SS.exportOffset) > LENGTH_EPS) ? NULL : &bl);
 
     // All of these are solid model edges, so use the appropriate style.
-    SEdge *se;
-    for(se = el.l.First(); se; se = el.l.NextAfter(se)) {
-        se->auxA = Style::SOLID_EDGE;
-    }
-    SBezier *sb;
-    for(sb = bl.l.First(); sb; sb = bl.l.NextAfter(sb)) {
-        sb->auxA = Style::SOLID_EDGE;
-    }
+    for(SEdge &se : el.l)
+        se.auxA = Style::SOLID_EDGE;
+
+    for(SBezier &sb : bl.l)
+        sb.auxA = Style::SOLID_EDGE;
 
     el.CullExtraneousEdges();
     bl.CullIdenticalBeziers();
@@ -122,8 +119,7 @@ void SolveSpaceUI::ExportViewOrWireframeTo(const char *filename, bool wireframe)
         sm = NULL;
     }
 
-    for(i = 0; i < SK.entity.n; i++) {
-        Entity *e = &(SK.entity.elem[i]);
+    for(Entity *e : SK.entity) {
         if(!e->IsVisible()) continue;
         if(e->construction) continue;
 
@@ -143,17 +139,13 @@ void SolveSpaceUI::ExportViewOrWireframeTo(const char *filename, bool wireframe)
         Group *g = SK.GetGroup(SS.GW.activeGroup);
         g->GenerateDisplayItems();
         SEdgeList *selr = &(g->displayEdges);
-        SEdge *se;
-        for(se = selr->l.First(); se; se = selr->l.NextAfter(se)) {
-            edges.AddEdge(se->a, se->b, Style::SOLID_EDGE);
-        }
+        for(SEdge &se : selr->l)
+            edges.AddEdge(se.a, se.b, Style::SOLID_EDGE);
     }
 
     if(SS.GW.showConstraints) {
-        Constraint *c;
-        for(c = SK.constraint.First(); c; c = SK.constraint.NextAfter(c)) {
+        for(Constraint *c : SK.constraint)
             c->GetEdges(&edges);
-        }
     }
 
     if(wireframe) {
@@ -194,19 +186,16 @@ void SolveSpaceUI::ExportWireframeCurves(SEdgeList *sel, SBezierList *sbl,
                            VectorFileWriter *out)
 {
     SBezierLoopSetSet sblss = {};
-    SEdge *se;
-    for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+    for(SEdge &se : sel->l) {
         SBezier sb = SBezier::From(
-                                (se->a).ScaledBy(1.0 / SS.exportScale),
-                                (se->b).ScaledBy(1.0 / SS.exportScale));
+                                (se.a).ScaledBy(1.0 / SS.exportScale),
+                                (se.b).ScaledBy(1.0 / SS.exportScale));
         sblss.AddOpenPath(&sb);
     }
 
     sbl->ScaleSelfBy(1.0/SS.exportScale);
-    SBezier *sb;
-    for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+    for(SBezier &sb : sbl->l)
         sblss.AddOpenPath(sb);
-    }
 
     out->Output(&sblss, NULL);
     sblss.Clear();
@@ -221,21 +210,18 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
 
     // Project into the export plane; so when we're done, z doesn't matter,
     // and x and y are what goes in the DXF.
-    SEdge *e;
-    for(e = sel->l.First(); e; e = sel->l.NextAfter(e)) {
+    for(SEdge &e : sel->l) {
         // project into the specified csys, and apply export scale
-        (e->a) = e->a.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
-        (e->b) = e->b.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
+        e.a = e.a.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
+        e.b = e.b.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
     }
 
-    SBezier *b;
     if(sbl) {
-        for(b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
-            *b = b->InPerspective(u, v, n, origin, cameraTan);
+        foreach(SBezier &b : sbl) {
+            b = b->InPerspective(u, v, n, origin, cameraTan);
             int i;
-            for(i = 0; i <= b->deg; i++) {
-                b->ctrl[i] = (b->ctrl[i]).ScaledBy(s);
-            }
+            for(i = 0; i <= b.deg; i++)
+                b.ctrl[i] = (b.ctrl[i]).ScaledBy(s);
         }
     }
 
@@ -262,8 +248,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
     if(sm) {
         Vector l0 = (SS.lightDir[0]).WithMagnitude(1),
                l1 = (SS.lightDir[1]).WithMagnitude(1);
-        STriangle *tr;
-        for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
+        for(STriangle *tr : sm->l) {
             STriangle tt = *tr;
             tt.a = (tt.a).InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
             tt.b = (tt.b).InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
@@ -312,8 +297,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
         root->ClearTags();
         int cnt = 1234;
 
-        SEdge *se;
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+        for(SEdge *se : sel->l) {
             if(se->auxA == Style::CONSTRAINT) {
                 // Constraints should not get hidden line removed; they're
                 // always on top.
@@ -329,8 +313,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
             out.MergeCollinearSegments(se->a, se->b);
             cnt++;
             // And add the results to our output
-            SEdge *sen;
-            for(sen = out.l.First(); sen; sen = out.l.NextAfter(sen)) {
+            for(SEdge *sen : out.l) {
                 hlrd.AddEdge(sen->a, sen->b, sen->auxA);
             }
             out.Clear();
@@ -345,7 +328,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
     for(e = sel->l.First(); e; e = sel->l.NextAfter(e)) {
         SBezier sb = SBezier::From(e->a, e->b);
         sb.auxA = e->auxA;
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
     }
     for(b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
         for(int i = 0; i <= b->deg; i++) {
@@ -445,10 +428,8 @@ void VectorFileWriter::Output(SBezierLoopSetSet *sblss, SMesh *sm) {
         }
     }
     if(sblss) {
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-            SBezierLoop *sbl;
-            for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
+        for(SBezierLoopSet *sbls : sblss->l) {
+            for(SBezierLoop *sbl : sbls->l) {
                 for(b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
                     for(int i = 0; i <= b->deg; i++) {
                         (b->ctrl[i]).MakeMaxMin(&ptMax, &ptMin);
@@ -481,8 +462,7 @@ void VectorFileWriter::Output(SBezierLoopSetSet *sblss, SMesh *sm) {
         }
     }
     if(sblss) {
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
+        for(SBezierLoopSet *sbls : sblss->l) {
             SBezierLoop *sbl;
             sbl = sbls->l.First();
             if(!sbl) continue;
@@ -597,8 +577,7 @@ void SolveSpaceUI::ExportMeshAsStlTo(FILE *f, SMesh *sm) {
 
     double s = SS.exportScale;
     int i;
-    for(i = 0; i < sm->l.n; i++) {
-        STriangle *tr = &(sm->l.elem[i]);
+    for(STriangle &tr : sm->l) {
         Vector n = tr->Normal().WithMagnitude(1);
         float w;
         w = (float)n.x;           fwrite(&w, 4, 1, f);
@@ -624,16 +603,14 @@ void SolveSpaceUI::ExportMeshAsStlTo(FILE *f, SMesh *sm) {
 //-----------------------------------------------------------------------------
 void SolveSpaceUI::ExportMeshAsObjTo(FILE *f, SMesh *sm) {
     SPointList spl = {};
-    STriangle *tr;
-    for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
+    for(STriangle *tr : sm->l) {
         spl.IncrementTagFor(tr->a);
         spl.IncrementTagFor(tr->b);
         spl.IncrementTagFor(tr->c);
     }
 
     // Output all the vertices.
-    SPoint *sp;
-    for(sp = spl.l.First(); sp; sp = spl.l.NextAfter(sp)) {
+    for(SPoint *sp : spl.l) {
         fprintf(f, "v %.10f %.10f %.10f\r\n",
                         sp->p.x / SS.exportScale,
                         sp->p.y / SS.exportScale,

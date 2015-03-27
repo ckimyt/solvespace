@@ -226,7 +226,7 @@ public:
                     hParam qw, hParam qvx, hParam qvy, hParam qvz,
                     bool asTrans, bool asAxisAngle);
 
-    void AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index);
+    void AddEq(IdList<Equation,hEquation> *l, ExprRef expr, int index);
     void GenerateEquations(IdList<Equation,hEquation> *l);
     bool IsVisible(void);
 
@@ -369,7 +369,7 @@ public:
     ExprQuaternion GetAxisAngleQuaternionExprs(int param0);
 
     bool IsCircle(void);
-    Expr *CircleGetRadiusExpr(void);
+    ExprRef CircleGetRadiusExpr(void);
     double CircleGetRadiusNum(void);
     void ArcGetAngles(double *thetaa, double *thetab, double *dtheta);
 
@@ -381,12 +381,12 @@ public:
     // For distances
     bool IsDistance(void);
     double DistanceGetNum(void);
-    Expr *DistanceGetExpr(void);
+    ExprRef DistanceGetExpr(void);
     void DistanceForceTo(double v);
 
     bool IsWorkplane(void);
     // The plane is points P such that P dot (xn, yn, zn) - d = 0
-    void WorkplaneGetPlaneExprs(ExprVector *n, Expr **d);
+    void WorkplaneGetPlaneExprs(ExprVector *n, ExprRef *d);
     ExprVector WorkplaneGetOffsetExprs(void);
     Vector WorkplaneGetOffset(void);
     EntityBase *Normal(void);
@@ -401,7 +401,7 @@ public:
     // Applies for any of the point types
     Vector PointGetNum(void);
     ExprVector PointGetExprs(void);
-    void PointGetExprsInWorkplane(hEntity wrkpl, Expr **u, Expr **v);
+    void PointGetExprsInWorkplane(hEntity wrkpl, ExprRef *u, ExprRef *v);
     void PointForceTo(Vector v);
     // These apply only the POINT_N_ROT_TRANS, which has an assoc rotation
     Quaternion PointGetQuaternion(void);
@@ -431,7 +431,7 @@ public:
     Vector EndpointStart();
     Vector EndpointFinish();
 
-    void AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index);
+    void AddEq(IdList<Equation,hEquation> *l, ExprRef expr, int index);
     void GenerateEquations(IdList<Equation,hEquation> *l);
 
     void Clear(void) {}
@@ -603,13 +603,13 @@ public:
     void GenerateReal(IdList<Equation,hEquation> *l);
     // Some helpers when generating symbolic constraint equations
     void ModifyToSatisfy(void);
-    void AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index);
-    static Expr *DirectionCosine(hEntity wrkpl, ExprVector ae, ExprVector be);
-    static Expr *Distance(hEntity workplane, hEntity pa, hEntity pb);
-    static Expr *PointLineDistance(hEntity workplane, hEntity pt, hEntity ln);
-    static Expr *PointPlaneDistance(ExprVector p, hEntity plane);
-    static Expr *VectorsParallel(int eq, ExprVector a, ExprVector b);
-    static ExprVector PointInThreeSpace(hEntity workplane, Expr *u, Expr *v);
+    void AddEq(IdList<Equation,hEquation> *l, ExprRef expr, int index);
+    static ExprRef DirectionCosine(hEntity wrkpl, ExprVector ae, ExprVector be);
+    static ExprRef Distance(hEntity workplane, hEntity pa, hEntity pb);
+    static ExprRef PointLineDistance(hEntity workplane, hEntity pt, hEntity ln);
+    static ExprRef PointPlaneDistance(ExprVector p, hEntity plane);
+    static ExprRef VectorsParallel(int eq, ExprVector a, ExprVector b);
+    static ExprVector PointInThreeSpace(hEntity workplane, ExprRef u, ExprRef v);
 
     void Clear(void) {}
 };
@@ -654,8 +654,7 @@ public:
 
     char *DescriptionString(void);
 
-    static void AddConstraint(Constraint *c, bool rememberForUndo);
-    static void AddConstraint(Constraint *c);
+    static void AddConstraint(Constraint &c, bool rememberForUndo = true);
     static void MenuConstrain(int id);
     static void DeleteAllConstraintsFor(int type, hEntity entityA, hEntity ptA);
 
@@ -679,7 +678,7 @@ public:
     int         tag;
     hEquation   h;
 
-    Expr        *e;
+    ExprRef     e;
 
     void Clear(void) {}
 };
