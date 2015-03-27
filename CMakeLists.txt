@@ -19,7 +19,7 @@ project(solvespace)
 set(solvespace_VERSION_MAJOR 2)
 set(solvespace_VERSION_MINOR 1)
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT APPLE)
     set(GUI gtk2 CACHE STRING "GUI toolkit to use (one of: gtk2 gtk3)")
 endif()
 
@@ -34,6 +34,8 @@ if(WIN32)
         -DISOLATION_AWARE_ENABLED=1
         -DWIN32=1
         -DWIN32_LEAN_AND_MEAN=1)
+else()
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-variable -std=c++11")
 endif()
 
 if((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)

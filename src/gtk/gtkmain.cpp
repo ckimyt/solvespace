@@ -51,7 +51,6 @@
 
 #include <GL/glx.h>
 
-#include <config.h>
 #include "solvespace.h"
 #include "../unix/gloffscreen.h"
 
@@ -965,10 +964,6 @@ void EnableMenuById(int id, bool enabled) {
     main_menu_items[id]->set_sensitive(enabled);
 }
 
-static void ActivateMenuById(int id) {
-    main_menu_items[id]->activate();
-}
-
 void CheckMenuById(int id, bool checked) {
     ((MainMenuItem<Gtk::CheckMenuItem>*)main_menu_items[id])->set_active(checked);
 }
@@ -1261,7 +1256,7 @@ private:
 class TextWindowGtk : public Gtk::Window {
 public:
     TextWindowGtk() : _scrollbar(), _widget(_scrollbar.get_adjustment()),
-                      _box(), _editor(_widget) {
+                      _editor(_widget), _box() {
         set_keep_above(true);
         set_type_hint(Gdk::WINDOW_TYPE_HINT_UTILITY);
         set_skip_taskbar_hint(true);

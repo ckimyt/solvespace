@@ -15,7 +15,6 @@
 
 #include "solvespace.h"
 #include "../unix/gloffscreen.h"
-#include <config.h>
 
 using SolveSpace::dbp;
 

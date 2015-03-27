@@ -274,13 +274,13 @@ void ssglFillMesh(RgbColor specColor, double specAlpha,
 
     glEnable(GL_NORMALIZE);
     RgbColor prevColor = NULL_COLOR;
-    double prevAlpha = -1.0;
+    GLfloat prevAlpha = -1.0f;
     glBegin(GL_TRIANGLES);
     for(int i = 0; i < m->l.n; i++) {
         STriangle *tr = &(m->l.elem[i]);
 
         RgbColor color;
-        double alpha;
+        GLfloat alpha;
         if(specColor.UseDefault()) {
             color = tr->meta.color;
             alpha = tr->meta.alpha;
