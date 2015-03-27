@@ -488,8 +488,7 @@ LRESULT CALLBACK TextWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONDOWN:
         case WM_MOUSEMOVE: {
             // We need this in order to get the WM_MOUSELEAVE
-            TRACKMOUSEEVENT tme;
-            ZERO(&tme);
+            TRACKMOUSEEVENT tme = {};
             tme.cbSize = sizeof(tme);
             tme.dwFlags = TME_LEAVE;
             tme.hwndTrack = TextWnd;
@@ -792,8 +791,7 @@ LRESULT CALLBACK GraphicsWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             int y = HIWORD(lParam);
 
             // We need this in order to get the WM_MOUSELEAVE
-            TRACKMOUSEEVENT tme;
-            ZERO(&tme);
+            TRACKMOUSEEVENT tme = {};
             tme.cbSize = sizeof(tme);
             tme.dwFlags = TME_LEAVE;
             tme.hwndTrack = GraphicsWnd;
@@ -980,8 +978,7 @@ void SolveSpace::LoadAllFontFiles(void)
     HANDLE h = FindFirstFile(dir, &wfd);
 
     while(h != INVALID_HANDLE_VALUE) {
-        TtfFont tf;
-        ZERO(&tf);
+        TtfFont tf = {};
 
         char fullPath[MAX_PATH];
         GetWindowsDirectory(fullPath, MAX_PATH - (30 + (UINT)strlen(wfd.cFileName)));
