@@ -130,7 +130,7 @@ SCurve SCurve::MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
     return ret;
 }
 
-void SShell::CopyCurvesSplitAgainst(bool opA, SShell *agnst, SShell *into) {    
+void SShell::CopyCurvesSplitAgainst(bool opA, SShell *agnst, SShell *into) {
     SCurve *sc;
     for(sc = curve.First(); sc; sc = curve.NextAfter(sc)) {
         SCurve scn = sc->MakeCopySplitAgainst(agnst, NULL,
@@ -275,7 +275,7 @@ static void DEBUGEDGELIST(SEdgeList *sel, SSurface *surf) {
     for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
         Vector mid = (se->a).Plus(se->b).ScaledBy(0.5);
         Vector arrow = (se->b).Minus(se->a);
-        SWAP(double, arrow.x, arrow.y);
+        swap(arrow.x, arrow.y);
         arrow.x *= -1;
         arrow = arrow.WithMagnitude(0.01);
         arrow = arrow.Plus(mid);
@@ -304,7 +304,7 @@ static const char *REGION(int d) {
 // point within the avoid list ever occurs in the middle of a chain. And we
 // delete the edges in that chain from our source list.
 //-----------------------------------------------------------------------------
-void SSurface::FindChainAvoiding(SEdgeList *src, SEdgeList *dest, 
+void SSurface::FindChainAvoiding(SEdgeList *src, SEdgeList *dest,
                                  SPointList *avoid)
 {
     if(src->l.n < 1) oops();
