@@ -237,7 +237,7 @@ char *SolveSpaceUI::MmToString(double v) {
     }
     return s;
 }
-double SolveSpaceUI::ExprToMm(Expr *e) {
+double SolveSpaceUI::ExprToMm(ExprRef e) {
     return (e->Eval()) * MmPerUnit();
 }
 double SolveSpaceUI::StringToMm(const char *str) {
@@ -556,16 +556,16 @@ void SolveSpaceUI::MenuAnalyze(int id) {
                 "The mesh is watertight (okay, valid).";
 
             char cntMsg[1024];
-            sprintf(cntMsg, "\n\nThe model contains %d triangles, from "
-                            "%d surfaces.",
-                g->displayMesh.l.n, g->runningShell.surface.n);
+            sprintf(cntMsg, "\n\nThe model contains %zu triangles, from "
+                            "%zu surfaces.",
+                g->displayMesh.l.Size(), g->runningShell.surface.Size());
 
-            if(SS.nakedEdges.l.n == 0) {
+            if(SS.nakedEdges.l.Size() == 0) {
                 Message("%s\n\n%s\n\nZero problematic edges, good.%s",
                     intersMsg, leaksMsg, cntMsg);
             } else {
                 Error("%s\n\n%s\n\n%d problematic edges, bad.%s",
-                    intersMsg, leaksMsg, SS.nakedEdges.l.n, cntMsg);
+                    intersMsg, leaksMsg, SS.nakedEdges.l.Size(), cntMsg);
             }
             break;
         }
@@ -583,7 +583,7 @@ void SolveSpaceUI::MenuAnalyze(int id) {
 
             if(inters) {
                 Error("%d edges interfere with other triangles, bad.",
-                    SS.nakedEdges.l.n);
+                    SS.nakedEdges.l.Size());
             } else {
                 Message("The assembly does not interfere, good.");
             }
@@ -595,7 +595,7 @@ void SolveSpaceUI::MenuAnalyze(int id) {
 
             double vol = 0;
             int i;
-            for(i = 0; i < m->l.n; i++) {
+            for(i = 0; i < m->l.Size(); i++) {
                 STriangle tr = m->l.elem[i];
 
                 // Translate to place vertex A at (x, y, 0)
@@ -709,10 +709,8 @@ void SolveSpaceUI::MenuAnalyze(int id) {
             if(GetSaveFile(exportFile, CSV_EXT, CSV_PATTERN)) {
                 FILE *f = fopen(exportFile, "wb");
                 if(f) {
-                    int i;
-                    SContour *sc = &(SS.traced.path);
-                    for(i = 0; i < sc->l.n; i++) {
-                        Vector p = sc->l.elem[i].p;
+                    for(SPoint *sp : SS.traced.path.l) {
+                        Vector p = sp->p;
                         double s = SS.exportScale;
                         fprintf(f, "%.10f, %.10f, %.10f\r\n",
                             p.x/s, p.y/s, p.z/s);

@@ -141,83 +141,73 @@ public:
     bool Equals(Point2d v, double tol=LENGTH_EPS);
 };
 
+template <class T>
+class VectorPtrIterator : public std::iterator<std::input_iterator_tag, T*>
+{
+  typename std::vector<T>::iterator _it;
+public:
+  VectorPtrIterator(typename std::vector<T>::iterator it) : _it(it) {}
+  VectorPtrIterator(const VectorPtrIterator& other) : _it(other._it) {}
+  VectorPtrIterator& operator++() { ++_it; return *this; }
+  VectorPtrIterator operator++(int) { VectorPtrIterator tmp(*this); operator++(); return tmp; }
+  bool operator==(const VectorPtrIterator& rhs) { return _it == rhs._it; }
+  bool operator!=(const VectorPtrIterator& rhs) { return _it != rhs._it; }
+  T* operator*() { return &*_it; }
+  T* operator->() { return &*_it; }
+  operator T*() { return &*_it; }
+};
+
 // A simple list
 template <class T>
 class List {
 public:
-    T   *elem;
-    int  n;
-    int  elemsAllocated;
+    std::vector<T> elem;
 
-    void AllocForOneMore(void) {
-        if(n >= elemsAllocated) {
-            elemsAllocated = (elemsAllocated + 32)*2;
-            elem = (T *)MemRealloc(elem, (size_t)elemsAllocated*sizeof(elem[0]));
-        }
+    VectorPtrIterator<T> begin() {
+        return VectorPtrIterator<T>(elem.begin());
     }
 
-    void Add(T *t) {
-        AllocForOneMore();
-        elem[n++] = *t;
+    VectorPtrIterator<T> end() {
+        return VectorPtrIterator<T>(elem.end());
     }
 
-    void AddToBeginning(T *t) {
-        AllocForOneMore();
-        memmove(elem+1, elem, n*sizeof(elem[0]));
-        n++;
-        elem[0] = *t;
+    void Add(T &t) {
+        elem.push_back(t);
     }
 
-    T *First(void) {
-        return (n == 0) ? NULL : &(elem[0]);
+    void AddToBeginning(T &t) {
+        elem.insert(elem.begin(), t);
     }
-    T *NextAfter(T *prev) {
-        if(!prev) return NULL;
-        if(prev - elem == (n - 1)) return NULL;
-        return prev + 1;
+
+    size_t Size() {
+        return elem.size();
     }
 
     void ClearTags(void) {
-        int i;
-        for(i = 0; i < n; i++) {
-            elem[i].tag = 0;
-        }
+        for(T &t : elem)
+            t.tag = 0;
     }
 
     void Clear(void) {
-        if(elem) MemFree(elem);
-        elem = NULL;
-        n = elemsAllocated = 0;
+        elem.clear();
     }
 
-    void RemoveTagged(void) {
-        int src, dest;
-        dest = 0;
-        for(src = 0; src < n; src++) {
-            if(elem[src].tag) {
-                // this item should be deleted
-            } else {
-                if(src != dest) {
-                    elem[dest] = elem[src];
-                }
-                dest++;
-            }
-        }
-        n = dest;
-        // and elemsAllocated is untouched, because we didn't resize
+    template<typename Predicate>
+    void RemoveIf(Predicate pred) {
+        auto it = std::remove_if(elem.begin(), elem.end(), pred);
+        elem.erase(it, elem.end());
+    }
+
+    void RemoveTagged() {
+        RemoveIf([](const T& t) { return t.tag; });
     }
 
     void RemoveLast(int cnt) {
-        if(n < cnt) oops();
-        n -= cnt;
-        // and elemsAllocated is untouched, same as in RemoveTagged
+        elem.resize(elem.size() - cnt);
     }
 
     void Reverse(void) {
-        int i;
-        for(i = 0; i < (n/2); i++) {
-            swap(elem[i], elem[(n-1)-i]);
-        }
+        std::reverse(elem.begin(), elem.end());
     }
 };
 
@@ -227,148 +217,100 @@ public:
 template <class T, class H>
 class IdList {
 public:
-    T     *elem;
-    int   n;
-    int   elemsAllocated;
+    std::vector<T> elem;
+
+    VectorPtrIterator<T> begin() {
+        return VectorPtrIterator<T>(elem.begin());
+    }
+
+    VectorPtrIterator<T> end() {
+        return VectorPtrIterator<T>(elem.end());
+    }
 
     uint32_t MaximumId(void) {
         uint32_t id = 0;
 
-        int i;
-        for(i = 0; i < n; i++) {
-            id = max(id, elem[i].h.v);
-        }
+        for(T &t : elem)
+            id = max(id, t.h.v);
+
         return id;
     }
 
-    H AddAndAssignId(T *t) {
-        t->h.v = (MaximumId() + 1);
+    H AddAndAssignId(T &t) {
+        t.h.v = MaximumId() + 1;
         Add(t);
 
-        return t->h;
+        return t.h;
     }
 
-    void Add(T *t) {
-        if(n >= elemsAllocated) {
-            elemsAllocated = (elemsAllocated + 32)*2;
-            elem = (T *)MemRealloc(elem, (size_t)elemsAllocated*sizeof(elem[0]));
+    void Add(T &t) {
+        auto it = std::lower_bound(elem.begin(), elem.end(), t,
+            [](const T& a, const T& b) { return a.h.v < b.h.v; });
+        if(it != elem.end() && it->h.v == t.h.v) {
+          dbp("trying to add element twice");
+          oops();
         }
 
-        int first = 0, last = n;
-        // We know that we must insert within the closed interval [first,last]
-        while(first != last) {
-            int mid = (first + last)/2;
-            H hm = elem[mid].h;
-            if(hm.v > t->h.v) {
-                last = mid;
-            } else if(hm.v < t->h.v) {
-                first = mid + 1;
-            } else {
-                dbp("can't insert in list; is handle %d not unique?", t->h.v);
-                oops();
-            }
-        }
-        int i = first;
+        elem.insert(it, t);
+    }
 
-        memmove(elem+i+1, elem+i, (size_t)(n-i)*sizeof(elem[0]));
-        elem[i] = *t;
-        n++;
+    size_t Size() {
+        return elem.size();
     }
 
     T *FindById(H h) {
         T *t = FindByIdNoOops(h);
         if(!t) {
-            dbp("failed to look up item %08x, searched %d items", h.v, n);
+            dbp("failed to look up item %08x, searched %d items", h, elem.size());
             oops();
         }
+
         return t;
     }
 
     T *FindByIdNoOops(H h) {
-        int first = 0, last = n-1;
-        while(first <= last) {
-            int mid = (first + last)/2;
-            H hm = elem[mid].h;
-            if(hm.v > h.v) {
-                last = mid-1; // and first stays the same
-            } else if(hm.v < h.v) {
-                first = mid+1; // and last stays the same
-            } else {
-                return &(elem[mid]);
-            }
-        }
-        return NULL;
-    }
-
-    T *First(void) {
-        return (n == 0) ? NULL : &(elem[0]);
-    }
-    T *NextAfter(T *prev) {
-        if(!prev) return NULL;
-        if(prev - elem == (n - 1)) return NULL;
-        return prev + 1;
+        auto it = std::find_if(elem.begin(), elem.end(),
+            [h](const T& t) { return t.h.v == h.v; });
+        return (it == elem.end() ? NULL : &*it);
     }
 
     void ClearTags(void) {
-        int i;
-        for(i = 0; i < n; i++) {
-            elem[i].tag = 0;
-        }
+        for(T &t : elem)
+            t.tag = 0;
     }
 
     void Tag(H h, int tag) {
-        int i;
-        for(i = 0; i < n; i++) {
-            if(elem[i].h.v == h.v) {
-                elem[i].tag = tag;
-            }
-        }
+        FindById(h)->tag = tag;
     }
 
-    void RemoveTagged(void) {
-        int src, dest;
-        dest = 0;
-        for(src = 0; src < n; src++) {
-            if(elem[src].tag) {
-                // this item should be deleted
-            } else {
-                if(src != dest) {
-                    elem[dest] = elem[src];
-                }
-                dest++;
-            }
-        }
-        n = dest;
-        // and elemsAllocated is untouched, because we didn't resize
+    template<typename Predicate>
+    void RemoveIf(Predicate pred) {
+        auto it = std::remove_if(elem.begin(), elem.end(), pred);
+        elem.erase(it, elem.end());
     }
+
     void RemoveById(H h) {
-        ClearTags();
-        FindById(h)->tag = 1;
-        RemoveTagged();
+        RemoveIf([h](const T& t) { return t.h.v == h.v; });
     }
 
-    void MoveSelfInto(IdList<T,H> *l) {
-        memcpy(l, this, sizeof(*this));
-        elemsAllocated = n = 0;
-        elem = NULL;
+    void RemoveTagged() {
+        RemoveIf([](const T& t) { return t.tag; });
     }
 
-    void DeepCopyInto(IdList<T,H> *l) {
-        l->elem = (T *)MemAlloc(elemsAllocated * sizeof(elem[0]));
-        memcpy(l->elem, elem, elemsAllocated * sizeof(elem[0]));
-        l->elemsAllocated = elemsAllocated;
-        l->n = n;
+    void MoveSelfInto(IdList<T,H> *other) {
+        other->elem.resize(elem.size());
+        std::move(elem.begin(), elem.end(), other->elem.begin());
+        elem.clear();
+    }
+
+    void DeepCopyInto(IdList<T,H> *other) {
+        other->elem.resize(elem.size());
+        std::copy(elem.begin(), elem.end(), other->elem.begin());
     }
 
     void Clear(void) {
-        for(int i = 0; i < n; i++) {
-            elem[i].Clear();
-        }
-        elemsAllocated = n = 0;
-        if(elem) MemFree(elem);
-        elem = NULL;
+        elem.clear();
     }
-
 };
 
 class NameStr {

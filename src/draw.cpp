@@ -79,9 +79,8 @@ void GraphicsWindow::ClearSelection(void) {
 
 void GraphicsWindow::ClearNonexistentSelectionItems(void) {
     bool change = false;
-    Selection *s;
     selection.ClearTags();
-    for(s = selection.First(); s; s = selection.NextAfter(s)) {
+    for(Selection *s : selection) {
         if(s->constraint.v && !(SK.constraint.FindByIdNoOops(s->constraint))) {
             s->tag = 1;
             change = true;
@@ -104,11 +103,9 @@ bool GraphicsWindow::IsSelected(hEntity he) {
     return IsSelected(&s);
 }
 bool GraphicsWindow::IsSelected(Selection *st) {
-    Selection *s;
-    for(s = selection.First(); s; s = selection.NextAfter(s)) {
-        if(s->Equals(st)) {
+    for(Selection *s : selection) {
+        if(s->Equals(st))
             return true;
-        }
     }
     return false;
 }
@@ -127,12 +124,10 @@ void GraphicsWindow::MakeUnselected(hEntity he, bool coincidentPointTrick) {
 void GraphicsWindow::MakeUnselected(Selection *stog, bool coincidentPointTrick){
     if(stog->IsEmpty()) return;
 
-    Selection *s;
-
     // If an item was selected, then we just un-select it.
     bool wasSelected = false;
     selection.ClearTags();
-    for(s = selection.First(); s; s = selection.NextAfter(s)) {
+    for(Selection *s : selection) {
         if(s->Equals(stog)) {
             s->tag = 1;
         }
@@ -144,7 +139,7 @@ void GraphicsWindow::MakeUnselected(Selection *stog, bool coincidentPointTrick){
         Entity *e = SK.GetEntity(stog->entity);
         if(e->IsPoint()) {
             Vector ep = e->PointGetNum();
-            for(s = selection.First(); s; s = selection.NextAfter(s)) {
+            for(Selection *s : selection) {
                 if(!s->entity.v) continue;
                 if(s->entity.v == stog->entity.v) continue;
                 Entity *se = SK.GetEntity(s->entity);
@@ -174,9 +169,8 @@ void GraphicsWindow::MakeSelected(Selection *stog) {
         // In the interest of speed for the triangle drawing code,
         // only two faces may be selected at a time.
         int c = 0;
-        Selection *s;
         selection.ClearTags();
-        for(s = selection.First(); s; s = selection.NextAfter(s)) {
+        for(Selection *s : selection) {
             hEntity he = s->entity;
             if(he.v != 0 && SK.GetEntity(he)->IsFace()) {
                 c++;
@@ -186,7 +180,7 @@ void GraphicsWindow::MakeSelected(Selection *stog) {
         selection.RemoveTagged();
     }
 
-    selection.Add(stog);
+    selection.Add(*stog);
 }
 
 //-----------------------------------------------------------------------------
@@ -201,8 +195,7 @@ void GraphicsWindow::SelectByMarquee(void) {
            ymin = min(orig.mouse.y, begin.y),
            ymax = max(orig.mouse.y, begin.y);
 
-    Entity *e;
-    for(e = SK.entity.First(); e; e = SK.entity.NextAfter(e)) {
+    for(Entity *e : SK.entity) {
         if(e->group.v != SS.GW.activeGroup.v) continue;
         if(e->IsFace() || e->IsDistance()) continue;
         if(!e->IsVisible()) continue;
@@ -224,8 +217,7 @@ void GraphicsWindow::SelectByMarquee(void) {
                    ptMax = Vector::From(xmax, ymax, 1);
             SEdgeList sel = {};
             e->GenerateEdges(&sel, true);
-            SEdge *se;
-            for(se = sel.l.First(); se; se = sel.l.NextAfter(se)) {
+            for(SEdge *se : sel.l) {
                 Point2d ppa = ProjectPoint(se->a),
                         ppb = ProjectPoint(se->b);
                 Vector  ptA = Vector::From(ppa.x, ppa.y, 0),
@@ -252,36 +244,36 @@ void GraphicsWindow::SelectByMarquee(void) {
 void GraphicsWindow::GroupSelection(void) {
     gs = {};
     int i;
-    for(i = 0; i < selection.n && i < MAX_SELECTED; i++) {
-        Selection *s = &(selection.elem[i]);
-        if(s->entity.v) {
+    for(i = 0; i < selection.Size() && i < MAX_SELECTED; i++) {
+        Selection &s = selection.elem[i];
+        if(s.entity.v) {
             (gs.n)++;
 
-            Entity *e = SK.entity.FindById(s->entity);
+            Entity *e = SK.entity.FindById(s.entity);
             // A list of points, and a list of all entities that aren't points.
             if(e->IsPoint()) {
-                gs.point[(gs.points)++] = s->entity;
+                gs.point[(gs.points)++] = s.entity;
             } else {
-                gs.entity[(gs.entities)++] = s->entity;
+                gs.entity[(gs.entities)++] = s.entity;
                 (gs.stylables)++;
             }
 
             // And an auxiliary list of normals, including normals from
             // workplanes.
             if(e->IsNormal()) {
-                gs.anyNormal[(gs.anyNormals)++] = s->entity;
+                gs.anyNormal[(gs.anyNormals)++] = s.entity;
             } else if(e->IsWorkplane()) {
                 gs.anyNormal[(gs.anyNormals)++] = e->Normal()->h;
             }
 
             // And of vectors (i.e., stuff with a direction to constrain)
             if(e->HasVector()) {
-                gs.vector[(gs.vectors)++] = s->entity;
+                gs.vector[(gs.vectors)++] = s.entity;
             }
 
             // Faces (which are special, associated/drawn with triangles)
             if(e->IsFace()) {
-                gs.face[(gs.faces)++] = s->entity;
+                gs.face[(gs.faces)++] = s.entity;
             }
 
             if(e->HasEndpoints()) {
@@ -303,9 +295,9 @@ void GraphicsWindow::GroupSelection(void) {
                 case Entity::CIRCLE:        (gs.circlesOrArcs)++; break;
             }
         }
-        if(s->constraint.v) {
-            gs.constraint[(gs.constraints)++] = s->constraint;
-            Constraint *c = SK.GetConstraint(s->constraint);
+        if(s.constraint.v) {
+            gs.constraint[(gs.constraints)++] = s.constraint;
+            Constraint *c = SK.GetConstraint(s.constraint);
             if(c->type == Constraint::COMMENT) {
                 (gs.stylables)++;
                 (gs.comments)++;
@@ -315,14 +307,12 @@ void GraphicsWindow::GroupSelection(void) {
 }
 
 void GraphicsWindow::HitTestMakeSelection(Point2d mp) {
-    int i;
     double d, dmin = 1e12;
     Selection s = {};
 
     // Always do the entities; we might be dragging something that should
     // be auto-constrained, and we need the hover for that.
-    for(i = 0; i < SK.entity.n; i++) {
-        Entity *e = &(SK.entity.elem[i]);
+    for(Entity *e : SK.entity) {
         // Don't hover whatever's being dragged.
         if(e->h.request().v == pending.point.request().v) {
             // The one exception is when we're creating a new cubic; we
@@ -347,11 +337,11 @@ void GraphicsWindow::HitTestMakeSelection(Point2d mp) {
     // The constraints and faces happen only when nothing's in progress.
     if(pending.operation == 0) {
         // Constraints
-        for(i = 0; i < SK.constraint.n; i++) {
-            d = SK.constraint.elem[i].GetDistance(mp);
+        for(Constraint *c : SK.constraint) {
+            d = c->GetDistance(mp);
             if(d < 10 && d < dmin) {
                 s = {};
-                s.constraint = SK.constraint.elem[i].h;
+                s.constraint = c->h;
                 dmin = d;
             }
         }
@@ -452,7 +442,6 @@ Vector GraphicsWindow::VectorFromProjs(Vector rightUpForward) {
 }
 
 void GraphicsWindow::Paint(void) {
-    int i;
     havePainted = true;
 
     int w, h;
@@ -690,8 +679,7 @@ nogrid:;
     // specially by assigning a style with a fill color, or when the filled
     // paths are just being filled by default. This should go last, to make
     // the transparency work.
-    Group *g;
-    for(g = SK.group.First(); g; g = SK.group.NextAfter(g)) {
+    for(Group *g : SK.group) {
         if(!(g->IsVisible())) continue;
         g->DrawFilledPaths();
     }
@@ -699,18 +687,16 @@ nogrid:;
 
     glDisable(GL_DEPTH_TEST);
     // Draw the constraints
-    for(i = 0; i < SK.constraint.n; i++) {
-        SK.constraint.elem[i].Draw();
-    }
+    for(Constraint *c : SK.constraint)
+        c->Draw();
 
     // Draw the traced path, if one exists
     ssglLineWidth(Style::Width(Style::ANALYZE));
     ssglColorRGB(Style::Color(Style::ANALYZE));
     SContour *sc = &(SS.traced.path);
     glBegin(GL_LINE_STRIP);
-    for(i = 0; i < sc->l.n; i++) {
-        ssglVertex3v(sc->l.elem[i].p);
-    }
+    for(SPoint *p : sc->l)
+        ssglVertex3v(p->p);
     glEnd();
 
     // And the naked edges, if the user did Analyze -> Show Naked Edges.
@@ -725,9 +711,8 @@ nogrid:;
 
     // And finally draw the selection, same mechanism.
     ssglLockColorTo(Style::Color(Style::SELECTED));
-    for(Selection *s = selection.First(); s; s = selection.NextAfter(s)) {
+    for(Selection *s : selection)
         s->Draw();
-    }
 
     ssglUnlockColor();
 

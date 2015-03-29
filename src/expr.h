@@ -9,12 +9,11 @@
 #define __EXPR_H
 
 class Expr;
-
-class Expr {
+class Expr : public std::enable_shared_from_this<Expr> {
 public:
     uint32_t marker;
 
-    enum {
+    enum Operator {
         // A parameter, by the hParam handle
         PARAM          =  0,
         // A parameter, by a pointer straight in to the param table (faster,
@@ -50,9 +49,9 @@ public:
         UNARY_OP       = 1003
     };
 
-    int op;
-    Expr    *a;
-    Expr    *b;
+    Operator op;
+    ExprRef a;
+    ExprRef b;
     union {
         double  v;
         hParam  parh;
@@ -63,32 +62,29 @@ public:
         char    c;
     }       x;
 
-    static inline Expr *AllocExpr(void)
-        { return (Expr *)AllocTemporary(sizeof(Expr)); }
+    static ExprRef From(hParam p);
+    static ExprRef From(double v);
 
-    static Expr *From(hParam p);
-    static Expr *From(double v);
+    ExprRef AnyOp(Operator op, ExprRef b);
+    inline ExprRef Plus (ExprRef b_) { return AnyOp(PLUS,  b_); }
+    inline ExprRef Minus(ExprRef b_) { return AnyOp(MINUS, b_); }
+    inline ExprRef Times(ExprRef b_) { return AnyOp(TIMES, b_); }
+    inline ExprRef Div  (ExprRef b_) { return AnyOp(DIV,   b_); }
 
-    Expr *AnyOp(int op, Expr *b);
-    inline Expr *Plus (Expr *b_) { return AnyOp(PLUS,  b_); }
-    inline Expr *Minus(Expr *b_) { return AnyOp(MINUS, b_); }
-    inline Expr *Times(Expr *b_) { return AnyOp(TIMES, b_); }
-    inline Expr *Div  (Expr *b_) { return AnyOp(DIV,   b_); }
+    inline ExprRef Negate(void) { return AnyOp(NEGATE, NULL); }
+    inline ExprRef Sqrt  (void) { return AnyOp(SQRT,   NULL); }
+    inline ExprRef Square(void) { return AnyOp(SQUARE, NULL); }
+    inline ExprRef Sin   (void) { return AnyOp(SIN,    NULL); }
+    inline ExprRef Cos   (void) { return AnyOp(COS,    NULL); }
+    inline ExprRef ASin  (void) { return AnyOp(ASIN,   NULL); }
+    inline ExprRef ACos  (void) { return AnyOp(ACOS,   NULL); }
 
-    inline Expr *Negate(void) { return AnyOp(NEGATE, NULL); }
-    inline Expr *Sqrt  (void) { return AnyOp(SQRT,   NULL); }
-    inline Expr *Square(void) { return AnyOp(SQUARE, NULL); }
-    inline Expr *Sin   (void) { return AnyOp(SIN,    NULL); }
-    inline Expr *Cos   (void) { return AnyOp(COS,    NULL); }
-    inline Expr *ASin  (void) { return AnyOp(ASIN,   NULL); }
-    inline Expr *ACos  (void) { return AnyOp(ACOS,   NULL); }
-
-    Expr *PartialWrt(hParam p);
+    ExprRef PartialWrt(hParam p);
     double Eval(void);
     uint64_t ParamsUsed(void);
     bool DependsOn(hParam p);
     static bool Tol(double a, double b);
-    Expr *FoldConstants(void);
+    ExprRef FoldConstants(void);
     void Substitute(hParam oldh, hParam newh);
 
     static const hParam NO_PARAMS, MULTIPLE_PARAMS;
@@ -106,57 +102,56 @@ public:
     int Nodes(void);
 
     // Make a simple copy
-    Expr *DeepCopy(void);
+    ExprRef DeepCopy(void);
     // Make a copy, with the parameters (usually referenced by hParam)
     // resolved to pointers to the actual value. This speeds things up
     // considerably.
-    Expr *DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
+    ExprRef DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
         IdList<Param,hParam> *thenTry);
 
-    static Expr *From(const char *in, bool popUpError);
+    static ExprRef From(const char *in, bool popUpError);
     static void  Lex(const char *in);
-    static Expr *Next(void);
+    static ExprRef Next(void);
     static void  Consume(void);
 
-    static void PushOperator(Expr *e);
-    static Expr *PopOperator(void);
-    static Expr *TopOperator(void);
-    static void PushOperand(Expr *e);
-    static Expr *PopOperand(void);
+    static void PushOperator(ExprRef e);
+    static ExprRef PopOperator(void);
+    static ExprRef TopOperator(void);
+    static void PushOperand(ExprRef e);
+    static ExprRef PopOperand(void);
 
     static void Reduce(void);
-    static void ReduceAndPush(Expr *e);
-    static int Precedence(Expr *e);
+    static void ReduceAndPush(ExprRef e);
+    static int Precedence(ExprRef e);
 
-    static int Precedence(int op);
     static void Parse(void);
 };
 
 class ExprVector {
 public:
-    Expr *x, *y, *z;
+    ExprRef x, y, z;
 
-    static ExprVector From(Expr *x, Expr *y, Expr *z);
+    static ExprVector From(ExprRef x, ExprRef y, ExprRef z);
     static ExprVector From(Vector vn);
     static ExprVector From(hParam x, hParam y, hParam z);
     static ExprVector From(double x, double y, double z);
 
     ExprVector Plus(ExprVector b);
     ExprVector Minus(ExprVector b);
-    Expr *Dot(ExprVector b);
+    ExprRef Dot(ExprVector b);
     ExprVector Cross(ExprVector b);
-    ExprVector ScaledBy(Expr *s);
-    ExprVector WithMagnitude(Expr *s);
-    Expr *Magnitude(void);
+    ExprVector ScaledBy(ExprRef s);
+    ExprVector WithMagnitude(ExprRef s);
+    ExprRef Magnitude(void);
 
     Vector Eval(void);
 };
 
 class ExprQuaternion {
 public:
-    Expr *w, *vx, *vy, *vz;
+    ExprRef w, vx, vy, vz;
 
-    static ExprQuaternion From(Expr *w, Expr *vx, Expr *vy, Expr *vz);
+    static ExprQuaternion From(ExprRef w, ExprRef vx, ExprRef vy, ExprRef vz);
     static ExprQuaternion From(Quaternion qn);
     static ExprQuaternion From(hParam w, hParam vx, hParam vy, hParam vz);
 
@@ -167,7 +162,7 @@ public:
     ExprVector Rotate(ExprVector p);
     ExprQuaternion Times(ExprQuaternion b);
 
-    Expr *Magnitude(void);
+    ExprRef Magnitude(void);
 };
 
 #endif

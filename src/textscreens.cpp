@@ -55,9 +55,7 @@ void TextWindow::ScreenToggleGroupShown(int link, uint32_t v) {
     SS.GenerateAll();
 }
 void TextWindow::ScreenShowGroupsSpecial(int link, uint32_t v) {
-    int i;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    for(Group *g : SK.group) {
 
         if(link == 's') {
             g->visible = true;
@@ -104,10 +102,9 @@ void TextWindow::ShowListOfGroups(void) {
 
     Printf(true, "%Ft active");
     Printf(false, "%Ft    shown ok  group-name%E");
-    int i;
     bool afterActive = false;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    int i = 0;
+    for(Group *g : SK.group) {
         char *s = g->DescriptionString();
         bool active = (g->h.v == SS.GW.activeGroup.v);
         bool shown = g->visible;
@@ -136,6 +133,7 @@ void TextWindow::ShowListOfGroups(void) {
             g->h.v, (&TextWindow::ScreenSelectGroup), s);
 
         if(active) afterActive = true;
+        i++;
     }
 
     Printf(true,  "  %Fl%Ls%fshow all%E / %Fl%Lh%fhide all%E",
@@ -177,14 +175,14 @@ void TextWindow::ScreenSelectConstraint(int link, uint32_t v) {
     SS.GW.ClearSelection();
     GraphicsWindow::Selection sel = {};
     sel.constraint.v = v;
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.Add(sel);
 }
 void TextWindow::ScreenSelectRequest(int link, uint32_t v) {
     SS.GW.ClearSelection();
     GraphicsWindow::Selection sel = {};
     hRequest hr = { v };
     sel.entity = hr.entity(0);
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.Add(sel);
 }
 
 void TextWindow::ScreenChangeGroupOption(int link, uint32_t v) {
@@ -421,10 +419,8 @@ list_items:
     Printf(false, "");
     Printf(false, "%Ft requests in group");
 
-    int i, a = 0;
-    for(i = 0; i < SK.request.n; i++) {
-        Request *r = &(SK.request.elem[i]);
-
+    int a = 0;
+    for(Request *r : SK.request) {
         if(r->group.v == shown.group.v) {
             char *s = r->DescriptionString();
             Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
@@ -439,8 +435,7 @@ list_items:
     a = 0;
     Printf(false, "");
     Printf(false, "%Ft constraints in group (%d DOF)", g->solved.dof);
-    for(i = 0; i < SK.constraint.n; i++) {
-        Constraint *c = &(SK.constraint.elem[i]);
+    for(Constraint *c : SK.constraint) {
 
         if(c->group.v == shown.group.v) {
             char *s = c->DescriptionString();
@@ -486,8 +481,8 @@ void TextWindow::ShowGroupSolveInfo(void) {
             return;
     }
 
-    for(int i = 0; i < g->solved.remove.n; i++) {
-        hConstraint hc = g->solved.remove.elem[i];
+    int i = 0;
+    for(hConstraint &hc : g->solved.remove.elem) {
         Constraint *c = SK.constraint.FindByIdNoOops(hc);
         if(!c) continue;
 
@@ -496,6 +491,7 @@ void TextWindow::ShowGroupSolveInfo(void) {
             c->h.v, (&TextWindow::ScreenSelectConstraint),
             (&TextWindow::ScreenHoverConstraint),
             c->DescriptionString());
+        i++;
     }
 
     Printf(true,  "It may be possible to fix the problem ");
@@ -626,7 +622,7 @@ void TextWindow::EditControlDone(const char *s) {
 
     switch(edit.meaning) {
         case EDIT_TIMES_REPEATED: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 SS.UndoRemember();
 
@@ -644,16 +640,16 @@ void TextWindow::EditControlDone(const char *s) {
                 g->valA = ev;
 
                 if(g->type == Group::ROTATE) {
-                    int i, c = 0;
-                    for(i = 0; i < SK.constraint.n; i++) {
-                        if(SK.constraint.elem[i].group.v == g->h.v) c++;
+                    int cc = 0;
+                    for(Constraint *c : SK.constraint) {
+                        if(c->group.v == g->h.v) cc++;
                     }
                     // If the group does not contain any constraints, then
                     // set the numerical guess to space the copies uniformly
                     // over one rotation. Don't touch the guess if we're
                     // already constrained, because that would break
                     // convergence.
-                    if(c == 0) {
+                    if(cc == 0) {
                         double copies = (g->skipFirst) ? (ev + 1) : ev;
                         SK.GetParam(g->h.param(3))->val = PI/(2*copies);
                     }
@@ -676,7 +672,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_GROUP_SCALE: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double ev = e->Eval();
                 if(fabs(ev) < 1e-6) {
@@ -708,7 +704,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_GROUP_OPACITY: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double alpha = e->Eval();
                 if(alpha < 0 || alpha > 1) {
@@ -734,7 +730,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_STEP_DIM_FINISH: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(!e) {
                 break;
             }
@@ -750,7 +746,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
 
         case EDIT_TANGENT_ARC_RADIUS: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(!e) break;
             if(e->Eval() < LENGTH_EPS) {
                 Error("Radius cannot be zero or negative.");

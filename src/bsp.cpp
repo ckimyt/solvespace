@@ -13,24 +13,16 @@ SBsp3 *SBsp3::Alloc(void) { return (SBsp3 *)AllocTemporary(sizeof(SBsp3)); }
 
 SBsp3 *SBsp3::FromMesh(SMesh *m) {
     SBsp3 *bsp3 = NULL;
-    int i;
 
     SMesh mc = {};
-    for(i = 0; i < m->l.n; i++) {
-        mc.AddTriangle(&(m->l.elem[i]));
-    }
+    for(STriangle *t : m->l)
+        mc.AddTriangle(*t);
 
-    srand(0); // Let's be deterministic, at least!
-    int n = mc.l.n;
-    while(n > 1) {
-        int k = rand() % n;
-        n--;
-        swap(mc.l.elem[k], mc.l.elem[n]);
-    }
+    std::srand(0); // Let's be deterministic, at least!
+    std::random_shuffle(mc.l.elem.begin(), mc.l.elem.end());
 
-    for(i = 0; i < mc.l.n; i++) {
-        bsp3 = bsp3->Insert(&(mc.l.elem[i]), NULL);
-    }
+    for(STriangle *t : mc.l)
+        bsp3 = bsp3->Insert(t, NULL);
 
     mc.Clear();
     return bsp3;
@@ -82,7 +74,7 @@ void SBsp3::InsertInPlane(bool pos2, STriangle *tr, SMesh *m) {
     }
 }
 
-void SBsp3::InsertHow(int how, STriangle *tr, SMesh *instead) {
+void SBsp3::InsertHow(InsertMode how, STriangle *tr, SMesh *instead) {
     switch(how) {
         case POS:
             if(instead && !pos) goto alt;
@@ -126,20 +118,20 @@ alt:
     }
 }
 
-void SBsp3::InsertConvexHow(int how, STriMeta meta, Vector *vertex, int n,
+void SBsp3::InsertConvexHow(InsertMode how, STriMeta meta, Vector *vertex, int cnt,
                             SMesh *instead)
 {
     switch(how) {
         case POS:
             if(pos) {
-                pos = pos->InsertConvex(meta, vertex, n, instead);
+                pos = pos->InsertConvex(meta, vertex, cnt, instead);
                 return;
             }
             break;
 
         case NEG:
             if(neg) {
-                neg = neg->InsertConvex(meta, vertex, n, instead);
+                neg = neg->InsertConvex(meta, vertex, cnt, instead);
                 return;
             }
             break;
@@ -147,7 +139,7 @@ void SBsp3::InsertConvexHow(int how, STriMeta meta, Vector *vertex, int n,
         default: oops();
     }
     int i;
-    for(i = 0; i < n - 2; i++) {
+    for(i = 0; i < cnt - 2; i++) {
         STriangle tr = STriangle::From(meta,
                                        vertex[0], vertex[i+1], vertex[i+2]);
         InsertHow(how, &tr, instead);
@@ -410,7 +402,7 @@ void SBsp3::GenerateInPaintOrder(SMesh *m) {
 
     SBsp3 *flip = this;
     while(flip) {
-        m->AddTriangle(&(flip->tri));
+        m->AddTriangle(flip->tri);
         flip = flip->more;
     }
 
@@ -543,7 +535,7 @@ SBsp2 *SBsp2::InsertEdge(SEdge *nedge, Vector nnp, Vector out) {
     oops();
 }
 
-void SBsp2::InsertTriangleHow(int how, STriangle *tr, SMesh *m, SBsp3 *bsp3) {
+void SBsp2::InsertTriangleHow(InsertMode how, STriangle *tr, SMesh *m, SBsp3 *bsp3) {
     switch(how) {
         case POS:
             if(pos) {

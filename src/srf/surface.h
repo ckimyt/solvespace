@@ -342,7 +342,7 @@ public:
             SShell *useCurvesFrom=NULL);
 
     Vector ExactSurfaceTangentAt(Vector p, SSurface *srfA, SSurface *srfB,
-                                Vector dir);
+                                 Vector dir);
     void MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *sbl);
     void MakeClassifyingBsp(SShell *shell, SShell *useCurvesFrom);
     double ChordToleranceForEdge(Vector a, Vector b);
@@ -404,7 +404,7 @@ public:
 
     void MakeFromCopyOf(SShell *a);
     void MakeFromTransformationOf(SShell *a,
-                                    Vector trans, Quaternion q, double scale);
+                                  Vector trans, Quaternion q, double scale);
     void MakeFromAssemblyOf(SShell *a, SShell *b);
     void MergeCoincidentSurfaces(void);
 

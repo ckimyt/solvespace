@@ -121,11 +121,11 @@ public:
     void UvTriangulateInto(SMesh *m, SSurface *srf);
 };
 
-typedef struct {
+struct STriMeta {
     uint32_t face;
     RgbColor color;
     double alpha;
-} STriMeta;
+};
 
 class SPolygon {
 public:
@@ -177,8 +177,8 @@ public:
 
     SBsp2       *more;
 
-    enum { POS = 100, NEG = 101, COPLANAR = 200 };
-    void InsertTriangleHow(int how, STriangle *tr, SMesh *m, SBsp3 *bsp3);
+    enum InsertMode { POS = 100, NEG = 101, COPLANAR = 200 };
+    void InsertTriangleHow(InsertMode how, STriangle *tr, SMesh *m, SBsp3 *bsp3);
     void InsertTriangle(STriangle *tr, SMesh *m, SBsp3 *bsp3);
     Vector IntersectionWith(Vector a, Vector b);
     SBsp2 *InsertEdge(SEdge *nedge, Vector nnp, Vector out);
@@ -205,11 +205,11 @@ public:
 
     Vector IntersectionWith(Vector a, Vector b);
 
-    enum { POS = 100, NEG = 101, COPLANAR = 200 };
-    void InsertHow(int how, STriangle *str, SMesh *instead);
+    enum InsertMode { POS = 100, NEG = 101, COPLANAR = 200 };
+    void InsertHow(InsertMode how, STriangle *str, SMesh *instead);
     SBsp3 *Insert(STriangle *str, SMesh *instead);
 
-    void InsertConvexHow(int how, STriMeta meta, Vector *vertex, int n,
+    void InsertConvexHow(InsertMode how, STriMeta meta, Vector *vertex, int n,
                                 SMesh *instead);
     SBsp3 *InsertConvex(STriMeta meta, Vector *vertex, int n, SMesh *instead);
 
@@ -230,7 +230,7 @@ public:
     bool    isTransparent;
 
     void Clear(void);
-    void AddTriangle(STriangle *st);
+    void AddTriangle(STriangle &st);
     void AddTriangle(STriMeta meta, Vector a, Vector b, Vector c);
     void AddTriangle(STriMeta meta, Vector n, Vector a, Vector b, Vector c);
     void DoBounding(Vector v, Vector *vmax, Vector *vmin);
@@ -244,7 +244,7 @@ public:
 
     void MakeFromCopyOf(SMesh *a);
     void MakeFromTransformationOf(SMesh *a,
-                                    Vector trans, Quaternion q, double scale);
+                                  Vector trans, Quaternion q, double scale);
     void MakeFromAssemblyOf(SMesh *a, SMesh *b);
 
     void MakeEdgesInPlaneInto(SEdgeList *sel, Vector n, double d);
@@ -284,17 +284,17 @@ public:
     void MakeMeshInto(SMesh *m);
     void ClearTags(void);
 
-    void FindEdgeOn(Vector a, Vector b, int *n, int cnt, bool coplanarIsInter,
-                                                bool *inter, bool *fwd,
-                                                uint32_t *face);
-    enum {
+    void FindEdgeOn(Vector a, Vector b, int *n, int cnt,
+                    bool coplanarIsInter, bool *inter,
+                    bool *fwd, uint32_t *face);
+    enum EdgeMode {
         NAKED_OR_SELF_INTER_EDGES  = 100,
         SELF_INTER_EDGES           = 200,
         TURNING_EDGES              = 300,
         EMPHASIZED_EDGES           = 400
     };
-    void MakeCertainEdgesInto(SEdgeList *sel, int how, bool coplanarIsInter,
-                                                bool *inter, bool *leaky);
+    void MakeCertainEdgesInto(SEdgeList *sel, EdgeMode how,
+                              bool coplanarIsInter, bool *inter, bool *leaky);
 
     void OcclusionTestLine(SEdge orig, SEdgeList *sel, int cnt);
     void SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr);

@@ -224,7 +224,7 @@ void GraphicsWindow::Init(void) {
     orig.projUp = projUp;
 
     // And with the last group active
-    activeGroup = SK.group.elem[SK.group.n-1].h;
+    activeGroup = SK.group.elem[SK.group.Size()-1].h;
     SK.GetGroup(activeGroup)->Activate();
 
     showWorkplanes = false;
@@ -319,14 +319,14 @@ void GraphicsWindow::HandlePointForZoomToFit(Vector p,
     pmin->y = min(pmin->y, pp.y);
     *wmin = min(*wmin, w);
 }
+
 void GraphicsWindow::LoopOverPoints(Point2d *pmax, Point2d *pmin, double *wmin,
                         bool div, bool includingInvisibles)
 {
     HandlePointForZoomToFit(Vector::From(0, 0, 0), pmax, pmin, wmin, div);
 
     int i, j;
-    for(i = 0; i < SK.entity.n; i++) {
-        Entity *e = &(SK.entity.elem[i]);
+    for(Entity *e : SK.entity) {
         if(!(e->IsVisible() || includingInvisibles)) continue;
         if(e->IsPoint()) {
             HandlePointForZoomToFit(e->PointGetNum(), pmax, pmin, wmin, div);
@@ -350,16 +350,14 @@ void GraphicsWindow::LoopOverPoints(Point2d *pmax, Point2d *pmin, double *wmin,
 
     Group *g = SK.GetGroup(activeGroup);
     g->GenerateDisplayItems();
-    for(i = 0; i < g->displayMesh.l.n; i++) {
-        STriangle *tr = &(g->displayMesh.l.elem[i]);
+    for(STriangle *tr : g->displayMesh.l) {
         HandlePointForZoomToFit(tr->a, pmax, pmin, wmin, div);
         HandlePointForZoomToFit(tr->b, pmax, pmin, wmin, div);
         HandlePointForZoomToFit(tr->c, pmax, pmin, wmin, div);
     }
-    for(i = 0; i < g->polyLoops.l.n; i++) {
-        SContour *sc = &(g->polyLoops.l.elem[i]);
-        for(j = 0; j < sc->l.n; j++) {
-            HandlePointForZoomToFit(sc->l.elem[j].p, pmax, pmin, wmin, div);
+    for(SContour *sc : g->polyLoops.l) {
+        for(SPoint *sp : sc->l) {
+            HandlePointForZoomToFit(sp->p, pmax, pmin, wmin, div);
         }
     }
 }
@@ -567,12 +565,12 @@ void GraphicsWindow::EnsureValidActives(void) {
     Group *g = SK.group.FindByIdNoOops(activeGroup);
     if((!g) || (g->h.v == Group::HGROUP_REFERENCES.v)) {
         int i;
-        for(i = 0; i < SK.group.n; i++) {
+        for(i = 0; i < SK.group.Size(); i++) {
             if(SK.group.elem[i].h.v != Group::HGROUP_REFERENCES.v) {
                 break;
             }
         }
-        if(i >= SK.group.n) {
+        if(i >= SK.group.Size()) {
             // This can happen if the user deletes all the groups in the
             // sketch. It's difficult to prevent that, because the last
             // group might have been deleted automatically, because it failed
@@ -664,8 +662,7 @@ void GraphicsWindow::ForceTextWindowShown(void) {
 void GraphicsWindow::DeleteTaggedRequests(void) {
     // Rewrite any point-coincident constraints that were affected by this
     // deletion.
-    Request *r;
-    for(r = SK.request.First(); r; r = SK.request.NextAfter(r)) {
+    for(Request *r : SK.request) {
         if(!r->tag) continue;
         FixConstraintsForRequestBeingDeleted(r->h);
     }
@@ -730,15 +727,13 @@ void GraphicsWindow::MenuEdit(int id) {
             SS.justExportedInfo.draw = false;
             // This clears the marks drawn to indicate which points are
             // still free to drag.
-            Param *p;
-            for(p = SK.param.First(); p; p = SK.param.NextAfter(p)) {
+            for(Param *p : SK.param) {
                 p->free = false;
             }
             break;
 
         case MNU_SELECT_ALL: {
-            Entity *e;
-            for(e = SK.entity.First(); e; e = SK.entity.NextAfter(e)) {
+            for(Entity *e : SK.entity) {
                 if(e->group.v != SS.GW.activeGroup.v) continue;
                 if(e->IsFace() || e->IsDistance()) continue;
                 if(!e->IsVisible()) continue;
@@ -756,7 +751,7 @@ void GraphicsWindow::MenuEdit(int id) {
             bool didSomething;
             do {
                 didSomething = false;
-                for(e = SK.entity.First(); e; e = SK.entity.NextAfter(e)) {
+                for(Entity *e : SK.entity) {
                     if(e->group.v != SS.GW.activeGroup.v) continue;
                     if(!e->HasEndpoints()) continue;
                     if(!e->IsVisible()) continue;
@@ -765,8 +760,7 @@ void GraphicsWindow::MenuEdit(int id) {
                            fi = e->EndpointFinish();
 
                     bool onChain = false, alreadySelected = false;
-                    List<Selection> *ls = &(SS.GW.selection);
-                    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
+                    for(Selection *s : SS.GW.selection) {
                         if(!s->entity.v) continue;
                         if(s->entity.v == e->h.v) {
                             alreadySelected = true;
@@ -850,8 +844,7 @@ void GraphicsWindow::MenuEdit(int id) {
             }
             SS.UndoRemember();
 
-            List<Selection> *ls = &(SS.GW.selection);
-            for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
+            for(Selection *s : SS.GW.selection) {
                 if(s->entity.v) {
                     hEntity hp = s->entity;
                     Entity *ep = SK.GetEntity(hp);
@@ -859,7 +852,7 @@ void GraphicsWindow::MenuEdit(int id) {
 
                     Vector p = ep->PointGetNum();
                     ep->PointForceTo(SS.GW.SnapToGrid(p));
-                    SS.GW.pending.points.Add(&hp);
+                    SS.GW.pending.points.Add(hp);
                     SS.MarkGroupDirty(ep->group);
                 } else if(s->constraint.v) {
                     Constraint *c = SK.GetConstraint(s->constraint);

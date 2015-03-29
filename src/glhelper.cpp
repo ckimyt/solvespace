@@ -276,9 +276,7 @@ void ssglFillMesh(RgbColor specColor, double specAlpha,
     RgbColor prevColor = NULL_COLOR;
     GLfloat prevAlpha = -1.0f;
     glBegin(GL_TRIANGLES);
-    for(int i = 0; i < m->l.n; i++) {
-        STriangle *tr = &(m->l.elem[i]);
-
+    for(STriangle *tr : m->l) {
         RgbColor color;
         GLfloat alpha;
         if(specColor.UseDefault()) {
@@ -356,8 +354,6 @@ static void SSGL_CALLBACK Combine(double coords[3], void *vertexData[4],
 }
 void ssglTesselatePolygon(GLUtesselator *gt, SPolygon *p)
 {
-    int i, j;
-
     gluTessCallback(gt, GLU_TESS_COMBINE, (ssglCallbackFptr *)Combine);
     gluTessProperty(gt, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD);
 
@@ -366,10 +362,9 @@ void ssglTesselatePolygon(GLUtesselator *gt, SPolygon *p)
     gluTessNormal(gt, normal.x, normal.y, normal.z);
 
     gluTessBeginPolygon(gt, NULL);
-    for(i = 0; i < p->l.n; i++) {
-        SContour *sc = &(p->l.elem[i]);
+    for(SContour *sc : p->l) {
         gluTessBeginContour(gt);
-        for(j = 0; j < (sc->l.n-1); j++) {
+        for(int j = 0; j < (sc->l.Size()-1); j++) {
             SPoint *sp = &(sc->l.elem[j]);
             double ap[3];
             ap[0] = sp->p.x;
@@ -384,13 +379,11 @@ void ssglTesselatePolygon(GLUtesselator *gt, SPolygon *p)
 
 void ssglDebugPolygon(SPolygon *p)
 {
-    int i, j;
     ssglLineWidth(2);
     glPointSize(7);
     glDisable(GL_DEPTH_TEST);
-    for(i = 0; i < p->l.n; i++) {
-        SContour *sc = &(p->l.elem[i]);
-        for(j = 0; j < (sc->l.n-1); j++) {
+    for(SContour *sc : p->l) {
+        for(int j = 0; j < (sc->l.Size()-1); j++) {
             Vector a = (sc->l.elem[j]).p;
             Vector b = (sc->l.elem[j+1]).p;
 
@@ -411,9 +404,8 @@ void ssglDebugPolygon(SPolygon *p)
 
 void ssglDrawEdges(SEdgeList *el, bool endpointsToo)
 {
-    SEdge *se;
     glBegin(GL_LINES);
-    for(se = el->l.First(); se; se = el->l.NextAfter(se)) {
+    for(SEdge *se : el->l) {
         ssglVertex3v(se->a);
         ssglVertex3v(se->b);
     }
@@ -422,7 +414,7 @@ void ssglDrawEdges(SEdgeList *el, bool endpointsToo)
     if(endpointsToo) {
         glPointSize(12);
         glBegin(GL_POINTS);
-        for(se = el->l.First(); se; se = el->l.NextAfter(se)) {
+        for(SEdge *se : el->l) {
             ssglVertex3v(se->a);
             ssglVertex3v(se->b);
         }
@@ -432,7 +424,6 @@ void ssglDrawEdges(SEdgeList *el, bool endpointsToo)
 
 void ssglDebugMesh(SMesh *m)
 {
-    int i;
     ssglLineWidth(1);
     glPointSize(7);
     ssglDepthRangeOffset(1);
@@ -440,8 +431,7 @@ void ssglDebugMesh(SMesh *m)
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     ssglColorRGBa(RGBi(0, 255, 0), 1.0);
     glBegin(GL_TRIANGLES);
-    for(i = 0; i < m->l.n; i++) {
-        STriangle *t = &(m->l.elem[i]);
+    for(STriangle *t : m->l) {
         if(t->tag) continue;
 
         ssglVertex3v(t->a);
@@ -456,12 +446,11 @@ void ssglDebugMesh(SMesh *m)
 void ssglMarkPolygonNormal(SPolygon *p)
 {
     Vector tail = Vector::From(0, 0, 0);
-    int i, j, cnt = 0;
+    int i, cnt = 0;
     // Choose some reasonable center point.
-    for(i = 0; i < p->l.n; i++) {
-        SContour *sc = &(p->l.elem[i]);
-        for(j = 0; j < (sc->l.n-1); j++) {
-            SPoint *sp = &(sc->l.elem[j]);
+    for(SContour *sc : p->l) {
+        for(i = 0; i < (sc->l.Size()-1); i++) {
+            SPoint *sp = &(sc->l.elem[i]);
             tail = tail.Plus(sp->p);
             cnt++;
         }

@@ -23,7 +23,7 @@ bool System::WriteJacobian(int tag) {
     int a, i, j;
 
     j = 0;
-    for(a = 0; a < param.n; a++) {
+    for(a = 0; a < param.Size(); a++) {
         if(j >= MAX_UNKNOWNS) return false;
 
         Param *p = &(param.elem[a]);
@@ -34,20 +34,20 @@ bool System::WriteJacobian(int tag) {
     mat.n = j;
 
     i = 0;
-    for(a = 0; a < eq.n; a++) {
+    for(a = 0; a < eq.Size(); a++) {
         if(i >= MAX_UNKNOWNS) return false;
 
         Equation *e = &(eq.elem[a]);
         if(e->tag != tag) continue;
 
         mat.eq[i] = e->h;
-        Expr *f = e->e->DeepCopyWithParamsAsPointers(&param, &(SK.param));
+        ExprRef f = e->e->DeepCopyWithParamsAsPointers(&param, &(SK.param));
         f = f->FoldConstants();
 
         // Hash table (61 bits) to accelerate generation of zero partials.
         uint64_t scoreboard = f->ParamsUsed();
         for(j = 0; j < mat.n; j++) {
-            Expr *pd;
+            ExprRef pd;
             if(scoreboard & ((uint64_t)1 << (mat.param[j].v % 61)) &&
                 f->DependsOn(mat.param[j]))
             {
@@ -77,18 +77,15 @@ void System::EvalJacobian(void) {
 }
 
 bool System::IsDragged(hParam p) {
-    hParam *pp;
-    for(pp = dragged.First(); pp; pp = dragged.NextAfter(pp)) {
+    for(hParam *pp : dragged)
         if(p.v == pp->v) return true;
-    }
+
     return false;
 }
 
 void System::SolveBySubstitution(void) {
-    int i;
-    for(i = 0; i < eq.n; i++) {
-        Equation *teq = &(eq.elem[i]);
-        Expr *tex = teq->e;
+    for(Equation *teq : eq) {
+        ExprRef tex = teq->e;
 
         if(tex->op    == Expr::MINUS &&
            tex->a->op == Expr::PARAM &&
@@ -110,16 +107,12 @@ void System::SolveBySubstitution(void) {
                 b = t;
             }
 
-            int j;
-            for(j = 0; j < eq.n; j++) {
-                Equation *req = &(eq.elem[j]);
-                (req->e)->Substitute(a, b); // A becomes B, B unchanged
+            for(Equation *req : eq) {
+                req->e->Substitute(a, b); // A becomes B, B unchanged
             }
-            for(j = 0; j < param.n; j++) {
-                Param *rp = &(param.elem[j]);
-                if(rp->substd.v == a.v) {
+            for(Param *rp : param) {
+                if(rp->substd.v == a.v)
                     rp->substd = b;
-                }
             }
             Param *ptr = param.FindById(a);
             ptr->tag = VAR_SUBSTITUTED;
@@ -320,10 +313,8 @@ bool System::NewtonSolve(int tag) {
 }
 
 void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
-    int i;
     // Generate all the equations from constraints in this group
-    for(i = 0; i < SK.constraint.n; i++) {
-        ConstraintBase *c = &(SK.constraint.elem[i]);
+    for(ConstraintBase *c : SK.constraint) {
         if(c->group.v != g->h.v) continue;
         if(c->h.v == hc.v) continue;
 
@@ -345,8 +336,7 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
         c->Generate(&eq);
     }
     // And the equations from entities
-    for(i = 0; i < SK.entity.n; i++) {
-        EntityBase *e = &(SK.entity.elem[i]);
+    for(EntityBase *e : SK.entity) {
         if(e->group.v != g->h.v) continue;
 
         e->GenerateEquations(&eq);
@@ -356,11 +346,8 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
 }
 
 void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad) {
-    int a, i;
-
-    for(a = 0; a < 2; a++) {
-        for(i = 0; i < SK.constraint.n; i++) {
-            ConstraintBase *c = &(SK.constraint.elem[i]);
+    for(int a = 0; a < 2; a++) {
+        for(ConstraintBase *c : SK.constraint) {
             if(c->group.v != g->h.v) continue;
             if((c->type == Constraint::POINTS_COINCIDENT && a == 0) ||
                (c->type != Constraint::POINTS_COINCIDENT && a == 1))
@@ -386,7 +373,7 @@ void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad) {
             int rank = CalculateRank();
             if(rank == mat.m) {
                 // We fixed it by removing this constraint
-                bad->Add(&(c->h));
+                bad->Add(c->h);
             }
         }
     }
@@ -397,7 +384,7 @@ int System::Solve(Group *g, int *dof, List<hConstraint> *bad,
 {
     WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g);
 
-    int i, j = 0;
+    int i;
 /*
     dbp("%d equations", eq.n);
     for(i = 0; i < eq.n; i++) {
@@ -419,8 +406,7 @@ int System::Solve(Group *g, int *dof, List<hConstraint> *bad,
     // the system is consistent yet, but if it isn't then we'll catch that
     // later.
     int alone = 1;
-    for(i = 0; i < eq.n; i++) {
-        Equation *e = &(eq.elem[i]);
+    for(Equation *e : eq) {
         if(e->tag != 0) continue;
 
         hParam hp = e->e->ReferencedParams(&param);
@@ -468,8 +454,7 @@ int System::Solve(Group *g, int *dof, List<hConstraint> *bad,
     // If requested, find all the free (unbound) variables. This might be
     // more than the number of degrees of freedom. Don't always do this,
     // because the display would get annoying and it's slow.
-    for(i = 0; i < param.n; i++) {
-        Param *p = &(param.elem[i]);
+    for(Param *p : param) {
         p->free = false;
 
         if(andFindFree) {
@@ -488,8 +473,7 @@ int System::Solve(Group *g, int *dof, List<hConstraint> *bad,
 
     // System solved correctly, so write the new values back in to the
     // main parameter table.
-    for(i = 0; i < param.n; i++) {
-        Param *p = &(param.elem[i]);
+    for(Param *p : param) {
         double val;
         if(p->tag == VAR_SUBSTITUTED) {
             val = param.FindById(p->substd)->val;
@@ -505,7 +489,7 @@ int System::Solve(Group *g, int *dof, List<hConstraint> *bad,
 
 didnt_converge:
     SK.constraint.ClearTags();
-    for(i = 0; i < eq.n; i++) {
+    for(i = 0; i < eq.Size(); i++) {
         if(ffabs(mat.B.num[i]) > CONVERGE_TOLERANCE || isnan(mat.B.num[i])) {
             // This constraint is unsatisfied.
             if(!mat.eq[i].isFromConstraint()) continue;
@@ -516,7 +500,7 @@ didnt_converge:
             // Don't double-show constraints that generated multiple
             // unsatisfied equations
             if(!c->tag) {
-                bad->Add(&(c->h));
+                bad->Add(c->h);
                 c->tag = 1;
             }
         }

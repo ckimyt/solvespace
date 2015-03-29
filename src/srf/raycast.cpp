@@ -219,7 +219,7 @@ void SSurface::AllPointsIntersectingUntrimmed(Vector a, Vector b,
             // (which it ought to, since the surfaces should be coincident)
             double u, v;
             ClosestPointTo(p, &u, &v);
-            l->Add(&inter);
+            l->Add(inter);
         } else {
             // Might not converge if line is almost tangent to surface...
         }
@@ -273,7 +273,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
             Vector p = Vector::AtIntersectionOfPlaneAndLine(n, d, a, b, NULL);
             Inter inter;
             ClosestPointTo(p, &(inter.p.x), &(inter.p.y));
-            inters.Add(&inter);
+            inters.Add(inter);
         }
     } else if(IsCylinder(&axis, &center, &radius, &start, &finish)) {
         // This one can be solved in closed form too.
@@ -329,7 +329,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
 
             Inter inter;
             ClosestPointTo(p, &(inter.p.x), &(inter.p.y));
-            inters.Add(&inter);
+            inters.Add(inter);
         }
     } else {
         // General numerical solution by subdivision, fallback
@@ -338,19 +338,16 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
     }
 
     // Remove duplicate intersection points
-    inters.ClearTags();
-    int i, j;
-    for(i = 0; i < inters.n; i++) {
-        for(j = i + 1; j < inters.n; j++) {
-            if(inters.elem[i].p.Equals(inters.elem[j].p)) {
-                inters.elem[j].tag = 1;
-            }
+    inters.RemoveIf([&](Inter &ina) {
+        for(Inter *inb : inters) {
+            if(ina.p.Equals(inb->p))
+                return true;
         }
-    }
-    inters.RemoveTagged();
+        return false;
+    });
 
-    for(i = 0; i < inters.n; i++) {
-        Point2d puv = inters.elem[i].p;
+    for(Inter *in : inters) {
+        Point2d puv = in->p;
 
         // Make sure the point lies within the finite line segment
         Vector pxyz = PointAt(puv.x, puv.y);
@@ -373,7 +370,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
         si.pinter = puv;
         si.srf = this;
         si.onEdge = (c != SBspUv::INSIDE);
-        l->Add(&si);
+        l->Add(si);
     }
 
     inters.Clear();
@@ -383,8 +380,7 @@ void SShell::AllPointsIntersecting(Vector a, Vector b,
                                    List<SInter> *il,
                                    bool seg, bool trimmed, bool inclTangent)
 {
-    SSurface *ss;
-    for(ss = surface.First(); ss; ss = surface.NextAfter(ss)) {
+    for(SSurface *ss : surface) {
         ss->AllPointsIntersecting(a, b, il, seg, trimmed, inclTangent);
     }
 }
@@ -432,13 +428,11 @@ bool SShell::ClassifyEdge(int *indir, int *outdir,
     // First, check for edge-on-edge
     int edge_inters = 0;
     Vector inter_surf_n[2], inter_edge_n[2];
-    SSurface *srf;
-    for(srf = surface.First(); srf; srf = surface.NextAfter(srf)) {
+    for(SSurface *srf : surface) {
         if(srf->LineEntirelyOutsideBbox(ea, eb, true)) continue;
 
         SEdgeList *sel = &(srf->edges);
-        SEdge *se;
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+        for(SEdge *se : sel->l) {
             if((ea.Equals(se->a) && eb.Equals(se->b)) ||
                (eb.Equals(se->a) && ea.Equals(se->b)) ||
                 p.OnLineSegment(se->a, se->b))
@@ -518,7 +512,7 @@ bool SShell::ClassifyEdge(int *indir, int *outdir,
     // are on surface) and for numerical stability, so we don't pick up
     // the additional error from the line intersection.
 
-    for(srf = surface.First(); srf; srf = surface.NextAfter(srf)) {
+    for(SSurface *srf : surface) {
         if(srf->LineEntirelyOutsideBbox(ea, eb, true)) continue;
 
         Point2d puv;
@@ -562,8 +556,7 @@ bool SShell::ClassifyEdge(int *indir, int *outdir,
         bool onEdge = false;
         edge_inters = 0;
 
-        SInter *si;
-        for(si = l.First(); si; si = l.NextAfter(si)) {
+        for(SInter *si : l) {
             double t = ((si->p).Minus(p)).DivPivoting(ray);
             if(t*ray.Magnitude() < -LENGTH_EPS) {
                 // wrong side, doesn't count

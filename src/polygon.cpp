@@ -155,7 +155,7 @@ void SEdgeList::AddEdge(Vector a, Vector b, int auxA, int auxB) {
     e.b = b;
     e.auxA = auxA;
     e.auxB = auxB;
-    l.Add(&e);
+    l.Add(e);
 }
 
 bool SEdgeList::AssembleContour(Vector first, Vector last, SContour *dest,
@@ -167,7 +167,7 @@ bool SEdgeList::AssembleContour(Vector first, Vector last, SContour *dest,
     dest->AddPoint(last);
 
     do {
-        for(i = 0; i < l.n; i++) {
+        for(i = 0; i < l.Size(); i++) {
             SEdge *se = &(l.elem[i]);
             if(se->tag) continue;
 
@@ -185,7 +185,7 @@ bool SEdgeList::AssembleContour(Vector first, Vector last, SContour *dest,
                 break;
             }
         }
-        if(i >= l.n) {
+        if(i >= l.Size()) {
             // Couldn't assemble a closed contour; mark where.
             if(errorAt) {
                 errorAt->a = first;
@@ -207,7 +207,7 @@ bool SEdgeList::AssemblePolygon(SPolygon *dest, SEdge *errorAt, bool keepDir) {
         Vector first = Vector::From(0, 0, 0);
         Vector last  = Vector::From(0, 0, 0);
         int i;
-        for(i = 0; i < l.n; i++) {
+        for(i = 0; i < l.Size(); i++) {
             if(!l.elem[i].tag) {
                 first = l.elem[i].a;
                 last = l.elem[i].b;
@@ -215,14 +215,14 @@ bool SEdgeList::AssemblePolygon(SPolygon *dest, SEdge *errorAt, bool keepDir) {
                 break;
             }
         }
-        if(i >= l.n) {
+        if(i >= l.Size()) {
             return allClosed;
         }
 
         // Create a new empty contour in our polygon, and finish assembling
         // into that contour.
         dest->AddEmptyContour();
-        if(!AssembleContour(first, last, &(dest->l.elem[dest->l.n-1]),
+        if(!AssembleContour(first, last, &(dest->l.elem[dest->l.Size()-1]),
                 errorAt, keepDir))
         {
             allClosed = false;
@@ -241,8 +241,7 @@ int SEdgeList::AnyEdgeCrossings(Vector a, Vector b,
                                 Vector *ppi, SPointList *spl)
 {
     int cnt = 0;
-    SEdge *se;
-    for(se = l.First(); se; se = l.NextAfter(se)) {
+    for(SEdge *se : l) {
         if(se->EdgeCrosses(a, b, ppi, spl)) {
             cnt++;
         }
@@ -255,15 +254,13 @@ int SEdgeList::AnyEdgeCrossings(Vector a, Vector b,
 // an endpoint with one of our edges.
 //-----------------------------------------------------------------------------
 bool SEdgeList::ContainsEdgeFrom(SEdgeList *sel) {
-    SEdge *se;
-    for(se = l.First(); se; se = l.NextAfter(se)) {
+    for(SEdge *se : l) {
         if(sel->ContainsEdge(se)) return true;
     }
     return false;
 }
 bool SEdgeList::ContainsEdge(SEdge *set) {
-    SEdge *se;
-    for(se = l.First(); se; se = l.NextAfter(se)) {
+    for(SEdge *se : l) {
         if((se->a).Equals(set->a) && (se->b).Equals(set->b)) return true;
         if((se->b).Equals(set->a) && (se->a).Equals(set->b)) return true;
     }
@@ -277,9 +274,9 @@ bool SEdgeList::ContainsEdge(SEdge *set) {
 void SEdgeList::CullExtraneousEdges(void) {
     l.ClearTags();
     int i, j;
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         SEdge *se = &(l.elem[i]);
-        for(j = i+1; j < l.n; j++) {
+        for(j = i+1; j < l.Size(); j++) {
             SEdge *set = &(l.elem[j]);
             if((set->a).Equals(se->a) && (set->b).Equals(se->b)) {
                 // Two parallel edges exist; so keep only the first one.
@@ -311,8 +308,7 @@ SEdgeLl *SEdgeLl::Alloc(void) {
 }
 SKdNodeEdges *SKdNodeEdges::From(SEdgeList *sel) {
     SEdgeLl *sell = NULL;
-    SEdge *se;
-    for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+    for(SEdge *se : sel->l) {
         SEdgeLl *n = SEdgeLl::Alloc();
         n->se = se;
         n->next = sell;
@@ -431,35 +427,29 @@ int SKdNodeEdges::AnyEdgeCrossings(Vector a, Vector b, int cnt,
 // We have an edge list that contains only collinear edges, maybe with more
 // splits than necessary. Merge any collinear segments that join.
 //-----------------------------------------------------------------------------
-static Vector LineStart, LineDirection;
-static int ByTAlongLine(const void *av, const void *bv)
-{
-    SEdge *a = (SEdge *)av,
-          *b = (SEdge *)bv;
-
-    double ta = (a->a.Minus(LineStart)).DivPivoting(LineDirection),
-           tb = (b->a.Minus(LineStart)).DivPivoting(LineDirection);
-
-    return (ta > tb) ? 1 : -1;
-}
 void SEdgeList::MergeCollinearSegments(Vector a, Vector b) {
-    LineStart = a;
-    LineDirection = b.Minus(a);
-    qsort(l.elem, l.n, sizeof(l.elem[0]), ByTAlongLine);
+    Vector lineStart = a;
+    Vector lineDirection = b.Minus(a);
+    std::sort(l.elem.begin(), l.elem.end(),
+        [lineStart, lineDirection](SEdge &a, SEdge &b) {
+            double ta = (a.a.Minus(lineStart)).DivPivoting(lineDirection),
+                   tb = (b.a.Minus(lineStart)).DivPivoting(lineDirection);
 
-    l.ClearTags();
-    int i;
-    for(i = 1; i < l.n; i++) {
-        SEdge *prev = &(l.elem[i-1]),
-              *now  = &(l.elem[i]);
+            return (ta > tb) ? 1 : -1;
+        });
 
-        if((prev->b).Equals(now->a)) {
-            // The previous segment joins up to us; so merge it into us.
-            prev->tag = 1;
-            now->a = prev->a;
-        }
-    }
-    l.RemoveTagged();
+    SEdge &prev = *l.elem.begin();
+    l.elem.erase(std::remove_if(l.elem.begin() + 1, l.elem.end(),
+        [prev](SEdge &now) mutable {
+            if((prev.b).Equals(now.a)) {
+                // The previous segment joins up to us; so merge us into it.
+                prev.b = now.b;
+                return true;
+            } else {
+                prev = now;
+                return false;
+            }
+        }));
 }
 
 void SPointList::Clear(void) {
@@ -472,7 +462,7 @@ bool SPointList::ContainsPoint(Vector pt) {
 
 int SPointList::IndexForPoint(Vector pt) {
     int i;
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         SPoint *p = &(l.elem[i]);
         if(pt.Equals(p->p)) {
             return i;
@@ -483,8 +473,7 @@ int SPointList::IndexForPoint(Vector pt) {
 }
 
 void SPointList::IncrementTagFor(Vector pt) {
-    SPoint *p;
-    for(p = l.First(); p; p = l.NextAfter(p)) {
+    for(SPoint *p : l) {
         if(pt.Equals(p->p)) {
             (p->tag)++;
             return;
@@ -493,13 +482,13 @@ void SPointList::IncrementTagFor(Vector pt) {
     SPoint pa;
     pa.p = pt;
     pa.tag = 1;
-    l.Add(&pa);
+    l.Add(pa);
 }
 
 void SPointList::Add(Vector pt) {
     SPoint p = {};
     p.p = pt;
-    l.Add(&p);
+    l.Add(p);
 }
 
 void SContour::AddPoint(Vector p) {
@@ -507,27 +496,25 @@ void SContour::AddPoint(Vector p) {
     sp.tag = 0;
     sp.p = p;
 
-    l.Add(&sp);
+    l.Add(sp);
 }
 
 void SContour::MakeEdgesInto(SEdgeList *el) {
     int i;
-    for(i = 0; i < (l.n - 1); i++) {
+    for(i = 0; i < (l.Size() - 1); i++) {
         el->AddEdge(l.elem[i].p, l.elem[i+1].p);
     }
 }
 
 void SContour::CopyInto(SContour *dest) {
-    SPoint *sp;
-    for(sp = l.First(); sp; sp = l.NextAfter(sp)) {
+    for(SPoint *sp : l) {
         dest->AddPoint(sp->p);
     }
 }
 
 void SContour::FindPointWithMinX(void) {
-    SPoint *sp;
     xminPt = Vector::From(1e10, 1e10, 1e10);
-    for(sp = l.First(); sp; sp = l.NextAfter(sp)) {
+    for(SPoint *sp : l) {
         if(sp->p.x < xminPt.x) {
             xminPt = sp->p;
         }
@@ -537,7 +524,7 @@ void SContour::FindPointWithMinX(void) {
 Vector SContour::ComputeNormal(void) {
     Vector n = Vector::From(0, 0, 0);
 
-    for(int i = 0; i < l.n - 2; i++) {
+    for(int i = 0; i < l.Size() - 2; i++) {
         Vector u = (l.elem[i+1].p).Minus(l.elem[i+0].p).WithMagnitude(1);
         Vector v = (l.elem[i+2].p).Minus(l.elem[i+1].p).WithMagnitude(1);
         Vector nt = u.Cross(v);
@@ -549,7 +536,7 @@ Vector SContour::ComputeNormal(void) {
 }
 
 Vector SContour::AnyEdgeMidpoint(void) {
-    if(l.n < 2) oops();
+    if(l.Size() < 2) oops();
     return ((l.elem[0].p).Plus(l.elem[1].p)).ScaledBy(0.5);
 }
 
@@ -567,7 +554,7 @@ double SContour::SignedAreaProjdToNormal(Vector n) {
     Vector v = n.Normal(1);
 
     double area = 0;
-    for(int i = 0; i < (l.n - 1); i++) {
+    for(int i = 0; i < (l.Size() - 1); i++) {
         double u0 = (l.elem[i  ].p).Dot(u);
         double v0 = (l.elem[i  ].p).Dot(v);
         double u1 = (l.elem[i+1].p).Dot(u);
@@ -586,12 +573,12 @@ bool SContour::ContainsPointProjdToNormal(Vector n, Vector p) {
     double vp = p.Dot(v);
 
     bool inside = false;
-    for(int i = 0; i < (l.n - 1); i++) {
+    for(int i = 0; i < (l.Size() - 1); i++) {
         double ua = (l.elem[i  ].p).Dot(u);
         double va = (l.elem[i  ].p).Dot(v);
         // The curve needs to be exactly closed; approximation is death.
-        double ub = (l.elem[(i+1)%(l.n-1)].p).Dot(u);
-        double vb = (l.elem[(i+1)%(l.n-1)].p).Dot(v);
+        double ub = (l.elem[(i+1)%(l.Size()-1)].p).Dot(u);
+        double vb = (l.elem[(i+1)%(l.Size()-1)].p).Dot(v);
 
         if ((((va <= vp) && (vp < vb)) ||
              ((vb <= vp) && (vp < va))) &&
@@ -610,36 +597,32 @@ void SContour::Reverse(void) {
 
 
 void SPolygon::Clear(void) {
-    int i;
-    for(i = 0; i < l.n; i++) {
-        (l.elem[i]).l.Clear();
+    for(SContour *c : l) {
+        c->l.Clear();
     }
     l.Clear();
 }
 
 void SPolygon::AddEmptyContour(void) {
     SContour c = {};
-    l.Add(&c);
+    l.Add(c);
 }
 
 void SPolygon::MakeEdgesInto(SEdgeList *el) {
-    int i;
-    for(i = 0; i < l.n; i++) {
-        (l.elem[i]).MakeEdgesInto(el);
-    }
+    for(SContour *c : l)
+        c->MakeEdgesInto(el);
 }
 
 Vector SPolygon::ComputeNormal(void) {
-    if(l.n < 1) return Vector::From(0, 0, 0);
+    if(l.Size() < 1) return Vector::From(0, 0, 0);
     return (l.elem[0]).ComputeNormal();
 }
 
 double SPolygon::SignedArea(void) {
-    SContour *sc;
     double area = 0;
     // This returns the true area only if the contours are all oriented
     // correctly, with the holes backwards from the outer contours.
-    for(sc = l.First(); sc; sc = l.NextAfter(sc)) {
+    for(SContour *sc : l) {
         area += sc->SignedAreaProjdToNormal(normal);
     }
     return area;
@@ -651,9 +634,7 @@ bool SPolygon::ContainsPoint(Vector p) {
 
 int SPolygon::WindingNumberForPoint(Vector p) {
     int winding = 0;
-    int i;
-    for(i = 0; i < l.n; i++) {
-        SContour *sc = &(l.elem[i]);
+    for(SContour *sc : l) {
         if(sc->ContainsPointProjdToNormal(normal, p)) {
             winding++;
         }
@@ -667,9 +648,9 @@ void SPolygon::FixContourDirections(void) {
 
     // Outside curve looks counterclockwise, projected against our normal.
     int i, j;
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         SContour *sc = &(l.elem[i]);
-        if(sc->l.n < 2) continue;
+        if(sc->l.Size() < 2) continue;
         // The contours may not intersect, but they may share vertices; so
         // testing a vertex for point-in-polygon may fail, but the midpoint
         // of an edge is okay.
@@ -677,7 +658,7 @@ void SPolygon::FixContourDirections(void) {
 
         sc->timesEnclosed = 0;
         bool outer = true;
-        for(j = 0; j < l.n; j++) {
+        for(j = 0; j < l.Size(); j++) {
             if(i == j) continue;
             SContour *sct = &(l.elem[j]);
             if(sct->ContainsPointProjdToNormal(normal, pt)) {
@@ -695,7 +676,7 @@ void SPolygon::FixContourDirections(void) {
 }
 
 bool SPolygon::IsEmpty(void) {
-    if(l.n == 0 || l.elem[0].l.n == 0) return true;
+    if(l.Size() == 0 || l.elem[0].l.Size() == 0) return true;
     return false;
 }
 
@@ -713,8 +694,7 @@ bool SPolygon::SelfIntersecting(Vector *intersectsAt) {
     el.l.ClearTags();
 
     bool ret = false;
-    SEdge *se;
-    for(se = el.l.First(); se; se = el.l.NextAfter(se)) {
+    for(SEdge *se : el.l) {
         int inters = kdtree->AnyEdgeCrossings(se->a, se->b, cnt, intersectsAt);
         if(inters != 1) {
             ret = true;
@@ -733,12 +713,10 @@ bool SPolygon::SelfIntersecting(Vector *intersectsAt) {
 // with respect to normal (0, 0, -1).
 //-----------------------------------------------------------------------------
 void SPolygon::OffsetInto(SPolygon *dest, double r) {
-    int i;
     dest->Clear();
-    for(i = 0; i < l.n; i++) {
-        SContour *sc = &(l.elem[i]);
+    for(SContour *sc : l) {
         dest->AddEmptyContour();
-        sc->OffsetInto(&(dest->l.elem[dest->l.n-1]), r);
+        sc->OffsetInto(&(dest->l.elem[dest->l.Size()-1]), r);
     }
 }
 //-----------------------------------------------------------------------------
@@ -788,14 +766,14 @@ static bool IntersectionOfLines(double x0A, double y0A, double dxA, double dyA,
 void SContour::OffsetInto(SContour *dest, double r) {
     int i;
 
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         Vector a, b, c;
         Vector dp, dn;
         double thetan, thetap;
 
-        a = l.elem[WRAP(i-1, (l.n-1))].p;
-        b = l.elem[WRAP(i,   (l.n-1))].p;
-        c = l.elem[WRAP(i+1, (l.n-1))].p;
+        a = l.elem[WRAP(i-1, (l.Size()-1))].p;
+        b = l.elem[WRAP(i,   (l.Size()-1))].p;
+        c = l.elem[WRAP(i+1, (l.Size()-1))].p;
 
         dp = a.Minus(b);
         thetap = atan2(dp.y, dp.x);

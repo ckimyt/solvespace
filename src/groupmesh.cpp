@@ -15,9 +15,7 @@ void Group::AssembleLoops(bool *allClosed,
 {
     SBezierList sbl = {};
 
-    int i;
-    for(i = 0; i < SK.entity.n; i++) {
-        Entity *e = &(SK.entity.elem[i]);
+    for(Entity *e : SK.entity) {
         if(e->group.v != h.v) continue;
         if(e->construction) continue;
         if(e->forceHidden) continue;
@@ -25,9 +23,9 @@ void Group::AssembleLoops(bool *allClosed,
         e->GenerateBezierCurves(&sbl);
     }
 
-    SBezier *sb;
     *allNonZeroLen = true;
-    for(sb = sbl.l.First(); sb; sb = sbl.l.NextAfter(sb)) {
+    for(SBezier *sb : sbl.l) {
+        int i;
         for(i = 1; i <= sb->deg; i++) {
             if(!(sb->ctrl[i]).Equals(sb->ctrl[0])) {
                 break;
@@ -83,8 +81,7 @@ void Group::GenerateLoops(void) {
 }
 
 void SShell::RemapFaces(Group *g, int remap) {
-    SSurface *ss;
-    for(ss = surface.First(); ss; ss = surface.NextAfter(ss)){
+    for(SSurface *ss : surface) {
         hEntity face = { ss->face };
         if(face.v == Entity::NO_ENTITY.v) continue;
 
@@ -94,8 +91,7 @@ void SShell::RemapFaces(Group *g, int remap) {
 }
 
 void SMesh::RemapFaces(Group *g, int remap) {
-    STriangle *tr;
-    for(tr = l.First(); tr; tr = l.NextAfter(tr)) {
+    for(STriangle *tr : l) {
         hEntity face = { tr->meta.face };
         if(face.v == Entity::NO_ENTITY.v) continue;
 
@@ -216,10 +212,8 @@ void Group::GenerateShellAndMesh(void) {
             tbot = translate.ScaledBy(-1); ttop = translate.ScaledBy(1);
         }
 
-        SBezierLoopSetSet *sblss = &(src->bezierLoops);
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-            int is = thisShell.surface.n;
+        for(SBezierLoopSet *sbls : src->bezierLoops.l) {
+            int is = thisShell.surface.Size();
             // Extrude this outer contour (plus its inner contours, if present)
             thisShell.MakeFromExtrusionOf(sbls, tbot, ttop, color, alpha);
 
@@ -227,7 +221,7 @@ void Group::GenerateShellAndMesh(void) {
             // that face, so that the user can select them with the mouse.
             Vector onOrig = sbls->point;
             int i;
-            for(i = is; i < thisShell.surface.n; i++) {
+            for(i = is; i < thisShell.surface.Size(); i++) {
                 SSurface *ss = &(thisShell.surface.elem[i]);
                 hEntity face = Entity::NO_ENTITY;
 
@@ -251,8 +245,7 @@ void Group::GenerateShellAndMesh(void) {
                 // So these are the sides
                 if(ss->degm != 1 || ss->degn != 1) continue;
 
-                Entity *e;
-                for(e = SK.entity.First(); e; e = SK.entity.NextAfter(e)) {
+                for(Entity *e : SK.entity) {
                     if(e->group.v != opA.v) continue;
                     if(e->type != Entity::LINE_SEGMENT) continue;
 
@@ -280,9 +273,7 @@ void Group::GenerateShellAndMesh(void) {
                axis = SK.GetEntity(predef.entityB)->VectorGetNum();
         axis = axis.WithMagnitude(1);
 
-        SBezierLoopSetSet *sblss = &(src->bezierLoops);
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
+        for(SBezierLoopSet *sbls : src->bezierLoops.l) {
             thisShell.MakeFromRevolutionOf(sbls, pt, axis, color, alpha);
         }
     } else if(type == IMPORTED) {
@@ -379,10 +370,9 @@ void Group::GenerateDisplayItems(void) {
 
             displayEdges.Clear();
             if(SS.GW.showEdges) {
-                SEdge *se;
                 SEdgeList *src = &(pg->displayEdges);
-                for(se = src->l.First(); se; se = src->l.NextAfter(se)) {
-                    displayEdges.l.Add(se);
+                for(SEdge *se : src->l) {
+                    displayEdges.l.Add(*se);
                 }
             }
         } else {
@@ -390,14 +380,13 @@ void Group::GenerateDisplayItems(void) {
             // shell, and edge-find the mesh.
             displayMesh.Clear();
             runningShell.TriangulateInto(&displayMesh);
-            STriangle *t;
-            for(t = runningMesh.l.First(); t; t = runningMesh.l.NextAfter(t)) {
+            for(STriangle *t : runningMesh.l) {
                 STriangle trn = *t;
                 Vector n = trn.Normal();
                 trn.an = n;
                 trn.bn = n;
                 trn.cn = n;
-                displayMesh.AddTriangle(&trn);
+                displayMesh.AddTriangle(trn);
             }
 
             displayEdges.Clear();
@@ -413,13 +402,12 @@ void Group::GenerateDisplayItems(void) {
 }
 
 Group *Group::PreviousGroup(void) {
-    int i;
-    for(i = 0; i < SK.group.n; i++) {
-        Group *g = &(SK.group.elem[i]);
+    Group *prev = NULL;
+    for(Group *g : SK.group) {
         if(g->h.v == h.v) break;
+        prev = g;
     }
-    if(i == 0 || i >= SK.group.n) return NULL;
-    return &(SK.group.elem[i-1]);
+    return prev;
 }
 
 Group *Group::RunningMeshGroup(void) {
@@ -544,10 +532,8 @@ void Group::FillLoopSetAsPolygon(SBezierLoopSet *sbls) {
 }
 
 void Group::DrawFilledPaths(void) {
-    SBezierLoopSet *sbls;
-    SBezierLoopSetSet *sblss = &bezierLoops;
-    for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-        if(sbls->l.n == 0 || sbls->l.elem[0].l.n == 0) continue;
+    for(SBezierLoopSet *sbls : bezierLoops.l) {
+        if(sbls->l.Size() == 0 || sbls->l.elem[0].l.Size() == 0) continue;
         // In an assembled loop, all the styles should be the same; so doesn't
         // matter which one we grab.
         SBezier *sb = &(sbls->l.elem[0].l.elem[0]);

@@ -23,16 +23,18 @@ void SMesh::AddTriangle(STriMeta meta, Vector n, Vector a, Vector b, Vector c) {
         AddTriangle(meta, c, b, a);
     }
 }
+
 void SMesh::AddTriangle(STriMeta meta, Vector a, Vector b, Vector c) {
     STriangle t = {};
     t.meta = meta;
     t.a = a;
     t.b = b;
     t.c = c;
-    AddTriangle(&t);
+    AddTriangle(t);
 }
-void SMesh::AddTriangle(STriangle *st) {
-    if(st->meta.alpha != 1.0f) isTransparent = true;
+
+void SMesh::AddTriangle(STriangle &st) {
+    if(st.meta.alpha != 1.0f) isTransparent = true;
     l.Add(st);
 }
 
@@ -46,11 +48,9 @@ void SMesh::DoBounding(Vector v, Vector *vmax, Vector *vmin) {
     vmin->z = min(vmin->z, v.z);
 }
 void SMesh::GetBounding(Vector *vmax, Vector *vmin) {
-    int i;
     *vmin = Vector::From( 1e12,  1e12,  1e12);
     *vmax = Vector::From(-1e12, -1e12, -1e12);
-    for(i = 0; i < l.n; i++) {
-        STriangle *st = &(l.elem[i]);
+    for(STriangle *st : l) {
         DoBounding(st->a, vmax, vmin);
         DoBounding(st->b, vmax, vmin);
         DoBounding(st->c, vmax, vmin);
@@ -67,9 +67,7 @@ void SMesh::MakeEdgesInPlaneInto(SEdgeList *sel, Vector n, double d) {
 
     // Delete all triangles in the mesh that do not lie in our export plane.
     m.l.ClearTags();
-    int i;
-    for(i = 0; i < m.l.n; i++) {
-        STriangle *tr = &(m.l.elem[i]);
+    for(STriangle *tr : m.l) {
 
         if((fabs(n.Dot(tr->a) - d) >= LENGTH_EPS) ||
            (fabs(n.Dot(tr->b) - d) >= LENGTH_EPS) ||
@@ -106,7 +104,7 @@ void SMesh::MakeEmphasizedEdgesInto(SEdgeList *sel) {
 // triangulates the convex poly.
 //-----------------------------------------------------------------------------
 void SMesh::Simplify(int start) {
-    int maxTriangles = (l.n - start) + 10;
+    int maxTriangles = (l.Size() - start) + 10;
 
     STriMeta meta = l.elem[start].meta;
 
@@ -120,7 +118,7 @@ void SMesh::Simplify(int start) {
     int start0 = start;
 
     int i, j;
-    for(i = start; i < l.n; i++) {
+    for(i = start; i < l.Size(); i++) {
         STriangle *tr = &(l.elem[i]);
         if(tr->MinAltitude() < LENGTH_EPS) {
             tr->tag = 1;
@@ -132,7 +130,7 @@ void SMesh::Simplify(int start) {
     for(;;) {
         bool didAdd;
         convc = 0;
-        for(i = start; i < l.n; i++) {
+        for(i = start; i < l.Size(); i++) {
             STriangle *tr = &(l.elem[i]);
             if(tr->tag) continue;
 
@@ -145,7 +143,7 @@ void SMesh::Simplify(int start) {
             start = i+1;
             break;
         }
-        if(i >= l.n) break;
+        if(i >= l.Size()) break;
 
         do {
             didAdd = false;
@@ -157,7 +155,7 @@ void SMesh::Simplify(int start) {
                        e = conv[WRAP((j+2), convc)];
 
                 Vector c;
-                for(i = start; i < l.n; i++) {
+                for(i = start; i < l.Size(); i++) {
                     STriangle *tr = &(l.elem[i]);
                     if(tr->tag) continue;
 
@@ -232,31 +230,28 @@ void SMesh::Simplify(int start) {
         }
     }
 
-    l.n = start0;
+    l.elem.resize(start0);
     for(i = 0; i < toutc; i++) {
-        AddTriangle(&(tout[i]));
+        AddTriangle(tout[i]);
     }
     FreeTemporary(tout);
     FreeTemporary(conv);
 }
 
 void SMesh::AddAgainstBsp(SMesh *srcm, SBsp3 *bsp3) {
-    int i;
-
-    for(i = 0; i < srcm->l.n; i++) {
-        STriangle *st = &(srcm->l.elem[i]);
-        int pn = l.n;
+    for(STriangle *st : srcm->l) {
+        int pn = l.Size();;
         atLeastOneDiscarded = false;
         bsp3->Insert(st, this);
-        if(!atLeastOneDiscarded && (l.n != (pn+1))) {
-            l.n = pn;
+        if(!atLeastOneDiscarded && (l.Size() != (pn+1))) {
+            l.elem.resize(pn);
             if(flipNormal) {
                 AddTriangle(st->meta, st->c, st->b, st->a);
             } else {
                 AddTriangle(st->meta, st->a, st->b, st->c);
             }
         }
-        if(l.n - pn > 1) {
+        if(l.Size() - pn > 1) {
             Simplify(pn);
         }
     }
@@ -289,9 +284,8 @@ void SMesh::MakeFromDifferenceOf(SMesh *a, SMesh *b) {
 }
 
 void SMesh::MakeFromCopyOf(SMesh *a) {
-    int i;
-    for(i = 0; i < a->l.n; i++) {
-        AddTriangle(&(a->l.elem[i]));
+    for(STriangle *tr : a->l) {
+        AddTriangle(*tr);
     }
 }
 
@@ -303,8 +297,7 @@ void SMesh::MakeFromAssemblyOf(SMesh *a, SMesh *b) {
 void SMesh::MakeFromTransformationOf(SMesh *a,
                                       Vector trans, Quaternion q, double scale)
 {
-    STriangle *tr;
-    for(tr = a->l.First(); tr; tr = a->l.NextAfter(tr)) {
+    for(STriangle *tr : a->l) {
         STriangle tt = *tr;
         tt.a = (tt.a).ScaledBy(scale);
         tt.b = (tt.b).ScaledBy(scale);
@@ -316,12 +309,12 @@ void SMesh::MakeFromTransformationOf(SMesh *a,
         tt.a = (q.Rotate(tt.a)).Plus(trans);
         tt.b = (q.Rotate(tt.b)).Plus(trans);
         tt.c = (q.Rotate(tt.c)).Plus(trans);
-        AddTriangle(&tt);
+        AddTriangle(tt);
     }
 }
 
 bool SMesh::IsEmpty(void) {
-    return (l.n == 0);
+    return (l.Size() == 0);
 }
 
 uint32_t SMesh::FirstIntersectionWith(Point2d mp) {
@@ -331,23 +324,21 @@ uint32_t SMesh::FirstIntersectionWith(Point2d mp) {
     double maxT = -1e12;
     uint32_t face = 0;
 
-    int i;
-    for(i = 0; i < l.n; i++) {
-        STriangle tr = l.elem[i];
-        tr.a = SS.GW.ProjectPoint3(tr.a);
-        tr.b = SS.GW.ProjectPoint3(tr.b);
-        tr.c = SS.GW.ProjectPoint3(tr.c);
+    for(STriangle *tr : l) {
+        tr->a = SS.GW.ProjectPoint3(tr->a);
+        tr->b = SS.GW.ProjectPoint3(tr->b);
+        tr->c = SS.GW.ProjectPoint3(tr->c);
 
-        Vector n = tr.Normal();
+        Vector n = tr->Normal();
 
         if(n.Dot(gn) < LENGTH_EPS) continue; // back-facing or on edge
 
-        if(tr.ContainsPointProjd(gn, p0)) {
+        if(tr->ContainsPointProjd(gn, p0)) {
             // Let our line have the form r(t) = p0 + gn*t
-            double t = -(n.Dot((tr.a).Minus(p0)))/(n.Dot(gn));
+            double t = -(n.Dot((tr->a).Minus(p0)))/(n.Dot(gn));
             if(t > maxT) {
                 maxT = t;
-                face = tr.meta.face;
+                face = tr->meta.face;
             }
         }
     }
@@ -360,25 +351,15 @@ SKdNode *SKdNode::Alloc(void)
     { return (SKdNode *)AllocTemporary(sizeof(SKdNode)); }
 
 SKdNode *SKdNode::From(SMesh *m) {
-    int i;
-    STriangle *tra = (STriangle *)AllocTemporary((m->l.n) * sizeof(*tra));
-
-    for(i = 0; i < m->l.n; i++) {
-        tra[i] = m->l.elem[i];
-    }
-
-    srand(0);
-    int n = m->l.n;
-    while(n > 1) {
-        int k = rand() % n;
-        n--;
-        swap(tra[k], tra[n]);
-    }
+    std::vector<STriangle> tra = m->l.elem;
+    std::srand(0);
+    std::random_shuffle(tra.begin(), tra.end());
 
     STriangleLl *tll = NULL;
-    for(i = 0; i < m->l.n; i++) {
+    for(STriangle tr : tra) {
         STriangleLl *tn = STriangleLl::Alloc();
-        tn->tri = &(tra[i]);
+        tn->tri = (STriangle*) AllocTemporary(sizeof(STriangle));
+        *tn->tri = tr;
         tn->next = tll;
         tll = tn;
     }
@@ -403,7 +384,6 @@ SKdNode *SKdNode::From(STriangleLl *tll) {
         int tcnt = 0;
         STriangleLl *ll;
         for(ll = tll; ll; ll = ll->next) {
-            STriangle *tr = ll->tri;
             split[i] += (ll->tri->a).Element(i);
             split[i] += (ll->tri->b).Element(i);
             split[i] += (ll->tri->c).Element(i);
@@ -500,9 +480,9 @@ void SKdNode::ClearTags(void) {
 
 void SKdNode::AddTriangle(STriangle *tr) {
     if(gt && lt) {
-        double ta = (tr->a).Element(which),
-               tb = (tr->b).Element(which),
-               tc = (tr->c).Element(which);
+        double ta = tr->a.Element(which),
+               tb = tr->b.Element(which),
+               tc = tr->c.Element(which);
         if(ta < c + KDTREE_EPS ||
            tb < c + KDTREE_EPS ||
            tc < c + KDTREE_EPS)
@@ -531,7 +511,7 @@ void SKdNode::MakeMeshInto(SMesh *m) {
     for(ll = tris; ll; ll = ll->next) {
         if(ll->tri->tag) continue;
 
-        m->AddTriangle(ll->tri);
+        m->AddTriangle(*ll->tri);
         ll->tri->tag = 1;
     }
 }
@@ -588,19 +568,19 @@ void SKdNode::SnapToVertex(Vector v, SMesh *extras) {
 
             if(v.OnLineSegment(tr->a, tr->b)) {
                 STriangle nt = STriangle::From(tr->meta, tr->a, v, tr->c);
-                extras->AddTriangle(&nt);
+                extras->AddTriangle(nt);
                 tr->a = v;
                 continue;
             }
             if(v.OnLineSegment(tr->b, tr->c)) {
                 STriangle nt = STriangle::From(tr->meta, tr->b, v, tr->a);
-                extras->AddTriangle(&nt);
+                extras->AddTriangle(nt);
                 tr->b = v;
                 continue;
             }
             if(v.OnLineSegment(tr->c, tr->a)) {
                 STriangle nt = STriangle::From(tr->meta, tr->c, v, tr->b);
-                extras->AddTriangle(&nt);
+                extras->AddTriangle(nt);
                 tr->c = v;
                 continue;
             }
@@ -614,20 +594,19 @@ void SKdNode::SnapToVertex(Vector v, SMesh *extras) {
 // be a vertex-to-vertex mesh.
 //-----------------------------------------------------------------------------
 void SKdNode::SnapToMesh(SMesh *m) {
-    int i, j, k;
-    for(i = 0; i < m->l.n; i++) {
-        STriangle *tr = &(m->l.elem[i]);
-        for(j = 0; j < 3; j++) {
-            Vector v = ((j == 0) ? tr->a :
-                       ((j == 1) ? tr->b :
+    int i, j;
+    for(STriangle *tr : m->l) {
+        for(i = 0; i < 3; i++) {
+            Vector v = ((i == 0) ? tr->a :
+                       ((i == 1) ? tr->b :
                                    tr->c));
 
             SMesh extra = {};
             SnapToVertex(v, &extra);
 
-            for(k = 0; k < extra.l.n; k++) {
+            for(j = 0; j < extra.l.Size(); j++) {
                 STriangle *tra = (STriangle *)AllocTemporary(sizeof(*tra));
-                *tra = extra.l.elem[k];
+                *tra = extra.l.elem[j];
                 AddTriangle(tra);
             }
             extra.Clear();
@@ -651,8 +630,7 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) {
         // If the edge crosses our triangle's plane, then split into above
         // and below parts. Note that we must preserve auxA, which contains
         // the style associated with this line.
-        SEdge *se;
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+        for(SEdge *se : sel->l) {
             double da = (se->a).Dot(tn) - td,
                    db = (se->b).Dot(tn) - td;
             if((da < -LENGTH_EPS && db > LENGTH_EPS) ||
@@ -665,12 +643,12 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) {
                 se->b = m;
             }
         }
-        for(se = seln.l.First(); se; se = seln.l.NextAfter(se)) {
+        for(SEdge *se : seln.l) {
             sel->AddEdge(se->a, se->b, se->auxA);
         }
         seln.Clear();
 
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+        for(SEdge *se : sel->l) {
             Vector pt = ((se->a).Plus(se->b)).ScaledBy(0.5);
             double dt = pt.Dot(tn) - td;
             if(pt.Dot(tn) - td > -LENGTH_EPS) {
@@ -700,7 +678,7 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) {
         // Split all of the edges where they intersect the triangle edges
         int i;
         for(i = 0; i < 3; i++) {
-            for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+            for(SEdge *se : sel->l) {
                 if(se->auxB) continue;
 
                 Point2d ap = (se->a).ProjectXy(),
@@ -717,7 +695,7 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) {
                     se->b = spl;
                 }
             }
-            for(se = seln.l.First(); se; se = seln.l.NextAfter(se)) {
+            for(SEdge *se : seln.l) {
                 // The split pieces are all behind the triangle, since only
                 // edges behind the triangle got split. So their auxB is 0.
                 sel->AddEdge(se->a, se->b, se->auxA, 0);
@@ -725,7 +703,7 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) {
             seln.Clear();
         }
 
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+        for(SEdge *se : sel->l) {
             if(se->auxB) {
                 // Lies above or on the triangle plane, so triangle doesn't
                 // occlude it.
@@ -895,8 +873,8 @@ void SKdNode::FindEdgeOn(Vector a, Vector b, int *n, int cnt,
 //    * emphasized edges (i.e., edges where a triangle from one face joins
 //      a triangle from a different face)
 //-----------------------------------------------------------------------------
-void SKdNode::MakeCertainEdgesInto(SEdgeList *sel, int how,
-                                bool coplanarIsInter, bool *inter, bool *leaky)
+void SKdNode::MakeCertainEdgesInto(SEdgeList *sel, EdgeMode how,
+                                   bool coplanarIsInter, bool *inter, bool *leaky)
 {
     if(inter) *inter = false;
     if(leaky) *leaky = false;
@@ -906,13 +884,10 @@ void SKdNode::MakeCertainEdgesInto(SEdgeList *sel, int how,
     MakeMeshInto(&m);
 
     int cnt = 1234;
-    int i, j;
-    for(i = 0; i < m.l.n; i++) {
-        STriangle *tr = &(m.l.elem[i]);
-
-        for(j = 0; j < 3; j++) {
-            Vector a = (j == 0) ? tr->a : ((j == 1)  ? tr->b : tr->c);
-            Vector b = (j == 0) ? tr->b : ((j == 1)  ? tr->c : tr->a);
+    for(STriangle *tr : m.l) {
+        for(int i = 0; i < 3; i++) {
+            Vector a = (i == 0) ? tr->a : ((i == 1)  ? tr->b : tr->c);
+            Vector b = (i == 0) ? tr->b : ((i == 1)  ? tr->c : tr->a);
 
             int n = 0;
             bool thisIntersects = false, fwd;

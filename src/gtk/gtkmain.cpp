@@ -1390,7 +1390,7 @@ void LoadAllFontFiles(void) {
            ufilename.substr(ufilename.length() - 4, 4).lowercase() == ".ttf") {
             TtfFont tf = {};
             strcpy(tf.fontFile, (char*) filename);
-            SS.fonts.l.Add(&tf);
+            SS.fonts.l.Add(tf);
         }
         FcStrFree(filename);
     }

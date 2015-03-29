@@ -292,8 +292,6 @@ set(solvespace_SOURCES
     srf/triangulate.cpp)
 
 add_executable(solvespace WIN32 MACOSX_BUNDLE
-    ${libslvs_HEADERS}
-    ${libslvs_SOURCES}
     ${util_SOURCES}
     ${platform_HEADERS}
     ${platform_SOURCES}

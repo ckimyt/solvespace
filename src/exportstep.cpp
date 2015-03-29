@@ -117,11 +117,11 @@ int StepFileWriter::ExportCurve(SBezier *sb) {
 }
 
 int StepFileWriter::ExportCurveLoop(SBezierLoop *loop, bool inner) {
-    if(loop->l.n < 1) oops();
+    if(loop->l.Size() < 1) oops();
 
     List<int> listOfTrims = {};
 
-    SBezier *sb = &(loop->l.elem[loop->l.n - 1]);
+    SBezier *sb = &(loop->l.elem[loop->l.Size() - 1]);
 
     // Generate "exactly closed" contours, with the same vertex id for the
     // finish of a previous edge and the start of the next one. So we need
@@ -132,11 +132,11 @@ int StepFileWriter::ExportCurveLoop(SBezierLoop *loop, bool inner) {
     int lastFinish = id + 1, prevFinish = lastFinish;
     id += 2;
 
-    for(sb = loop->l.First(); sb; sb = loop->l.NextAfter(sb)) {
+    for(auto sb = loop->l.begin(); sb != loop->l.end(); ++sb) {
         int curveId = ExportCurve(sb);
 
         int thisFinish;
-        if(loop->l.NextAfter(sb) != NULL) {
+        if((sb + 1) != loop->l.end()) {
             fprintf(f, "#%d=CARTESIAN_POINT('',(%.10f,%.10f,%.10f));\n",
                 id, CO(sb->Finish()));
             fprintf(f, "#%d=VERTEX_POINT('',#%d);\n", id+1, id);
@@ -152,17 +152,16 @@ int StepFileWriter::ExportCurveLoop(SBezierLoop *loop, bool inner) {
             id+1, id);
 
         int oe = id+1;
-        listOfTrims.Add(&oe);
+        listOfTrims.Add(oe);
         id += 2;
 
         prevFinish = thisFinish;
     }
 
     fprintf(f, "#%d=EDGE_LOOP('',(", id);
-    int *oe;
-    for(oe = listOfTrims.First(); oe; oe = listOfTrims.NextAfter(oe)) {
-        fprintf(f, "#%d", *oe);
-        if(listOfTrims.NextAfter(oe) != NULL) fprintf(f, ",");
+    for(auto oe = listOfTrims.begin(); oe != listOfTrims.end(); ++oe) {
+        fprintf(f, "#%d", **oe);
+        if((oe + 1) != listOfTrims.end()) fprintf(f, ",");
     }
     fprintf(f, "));\n");
 
@@ -245,36 +244,34 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
     // So in our list of SBezierLoopSet, each set contains at least one loop
     // (the outer boundary), plus any inner loops associated with that outer
     // loop.
-    SBezierLoopSet *sbls;
-    for(sbls = sblss.l.First(); sbls; sbls = sblss.l.NextAfter(sbls)) {
-        SBezierLoop *loop = sbls->l.First();
+    for(SBezierLoopSet *sbls : sblss.l) {
+        auto loop = sbls->l.begin();
 
         List<int> listOfLoops = {};
         // Create the face outer boundary from the outer loop.
         int fob = ExportCurveLoop(loop, false);
-        listOfLoops.Add(&fob);
+        listOfLoops.Add(fob);
 
         // And create the face inner boundaries from any inner loops that
         // lie within this contour.
-        loop = sbls->l.NextAfter(loop);
-        for(; loop; loop = sbls->l.NextAfter(loop)) {
+        ++loop;
+        for(; loop != sbls->l.end(); ++loop) {
             int fib = ExportCurveLoop(loop, true);
-            listOfLoops.Add(&fib);
+            listOfLoops.Add(fib);
         }
 
         // And now create the face that corresponds to this outer loop
         // and all of its holes.
         int advFaceId = id;
         fprintf(f, "#%d=ADVANCED_FACE('',(", advFaceId);
-        int *fb;
-        for(fb = listOfLoops.First(); fb; fb = listOfLoops.NextAfter(fb)) {
-            fprintf(f, "#%d", *fb);
-            if(listOfLoops.NextAfter(fb) != NULL) fprintf(f, ",");
+        for(auto fb = listOfLoops.begin(); fb != listOfLoops.end(); ++fb) {
+            fprintf(f, "#%d", **fb);
+            if((fb + 1) != listOfLoops.end()) fprintf(f, ",");
         }
 
         fprintf(f, "),#%d,.T.);\n", srfid);
         fprintf(f, "\n");
-        advancedFaces.Add(&advFaceId);
+        advancedFaces.Add(advFaceId);
 
         id++;
         listOfLoops.Clear();
@@ -296,9 +293,9 @@ void StepFileWriter::ExportSurfacesTo(char *file) {
     Group *g = SK.GetGroup(SS.GW.activeGroup);
     SShell *shell = &(g->runningShell);
 
-    if(shell->surface.n == 0) {
+    if(shell->surface.Size() == 0) {
         Error("The model does not contain any surfaces to export.%s",
-            g->runningMesh.l.n > 0 ?
+            g->runningMesh.l.Size() > 0 ?
                 "\n\nThe model does contain triangles from a mesh, but "
                 "a triangle mesh cannot be exported as a STEP file. Try "
                 "File -> Export Mesh... instead." : "");
@@ -316,9 +313,8 @@ void StepFileWriter::ExportSurfacesTo(char *file) {
 
     advancedFaces = {};
 
-    SSurface *ss;
-    for(ss = shell->surface.First(); ss; ss = shell->surface.NextAfter(ss)) {
-        if(ss->trim.n == 0) continue;
+    for(SSurface *ss : shell->surface) {
+        if(ss->trim.Size() == 0) continue;
 
         // Get all of the loops of Beziers that trim our surface (with each
         // Bezier split so that we use the section as t goes from 0 to 1), and
@@ -336,10 +332,10 @@ void StepFileWriter::ExportSurfacesTo(char *file) {
     }
 
     fprintf(f, "#%d=CLOSED_SHELL('',(", id);
-    int *af;
-    for(af = advancedFaces.First(); af; af = advancedFaces.NextAfter(af)) {
-        fprintf(f, "#%d", *af);
-        if(advancedFaces.NextAfter(af) != NULL) fprintf(f, ",");
+
+    for(auto af = advancedFaces.begin(); af != advancedFaces.end(); ++af) {
+        fprintf(f, "#%d", **af);
+        if((af + 1) != advancedFaces.end()) fprintf(f, ",");
     }
     fprintf(f, "));\n");
     fprintf(f, "#%d=MANIFOLD_SOLID_BREP('brep',#%d);\n", id+1, id);
@@ -356,10 +352,9 @@ void StepFileWriter::ExportSurfacesTo(char *file) {
 
 void StepFileWriter::WriteWireframe(void) {
     fprintf(f, "#%d=GEOMETRIC_CURVE_SET('curves',(", id);
-    int *c;
-    for(c = curves.First(); c; c = curves.NextAfter(c)) {
-        fprintf(f, "#%d", *c);
-        if(curves.NextAfter(c) != NULL) fprintf(f, ",");
+    for(auto c = curves.begin(); c != curves.end(); ++c) {
+        fprintf(f, "#%d", **c);
+        if((c + 1) != curves.end()) fprintf(f, ",");
     }
     fprintf(f, "));\n");
     fprintf(f, "#%d=GEOMETRICALLY_BOUNDED_WIREFRAME_SHAPE_REPRESENTATION"

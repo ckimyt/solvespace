@@ -656,18 +656,17 @@ void GCodeFileWriter::FinishAndCloseFile(void) {
     for(i = 0; i < SS.gCode.passes; i++) {
         double depth = (SS.gCode.depth / SS.gCode.passes)*(i+1);
 
-        SContour *sc;
-        for(sc = sp.l.First(); sc; sc = sp.l.NextAfter(sc)) {
-            if(sc->l.n < 2) continue;
+        for(SContour *sc : sp.l) {
+            if(sc->l.Size() < 2) continue;
 
-            SPoint *pt = sc->l.First();
+            auto pt = sc->l.begin();
             fprintf(f, "G00 X%s Y%s\r\n",
                     SS.MmToString(pt->p.x), SS.MmToString(pt->p.y));
             fprintf(f, "G01 Z%s F%s\r\n",
-                SS.MmToString(depth), SS.MmToString(SS.gCode.plungeFeed));
+                    SS.MmToString(depth), SS.MmToString(SS.gCode.plungeFeed));
 
-            pt = sc->l.NextAfter(pt);
-            for(; pt; pt = sc->l.NextAfter(pt)) {
+            ++pt;
+            for(; pt != sc->l.end(); ++pt) {
                 fprintf(f, "G01 X%s Y%s F%s\r\n",
                         SS.MmToString(pt->p.x), SS.MmToString(pt->p.y),
                         SS.MmToString(SS.gCode.feed));
@@ -708,7 +707,7 @@ void Step2dFileWriter::FinishPath(RgbColor strokeRgb, double lineWidth,
 
 void Step2dFileWriter::Bezier(SBezier *sb) {
     int c = sfw.ExportCurve(sb);
-    sfw.curves.Add(&c);
+    sfw.curves.Add(c);
 }
 
 void Step2dFileWriter::FinishAndCloseFile(void) {

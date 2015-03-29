@@ -22,8 +22,7 @@ void GraphicsWindow::AddPointToDraggedList(hEntity hp) {
     // If an entity and its points are both selected, then its points could
     // end up in the list twice. This would be bad, because it would move
     // twice as far as the mouse pointer...
-    List<hEntity> *lhe = &(pending.points);
-    for(hEntity *hee = lhe->First(); hee; hee = lhe->NextAfter(hee)) {
+    for(hEntity *hee : pending.points) {
         if(hee->v == hp.v) {
             // Exact same point.
             return;
@@ -39,7 +38,7 @@ void GraphicsWindow::AddPointToDraggedList(hEntity hp) {
             return;
         }
     }
-    pending.points.Add(&hp);
+    pending.points.Add(hp);
 }
 
 void GraphicsWindow::StartDraggingByEntity(hEntity he) {
@@ -63,8 +62,7 @@ void GraphicsWindow::StartDraggingByEntity(hEntity he) {
 }
 
 void GraphicsWindow::StartDraggingBySelection(void) {
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
+    for(Selection *s : selection) {
         if(!s->entity.v) continue;
 
         StartDraggingByEntity(s->entity);
@@ -176,7 +174,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
             if(hover.entity.v) e = SK.GetEntity(hover.entity);
             if(e && e->type != Entity::WORKPLANE) {
                 Entity *e = SK.GetEntity(hover.entity);
-                if(e->type == Entity::CIRCLE && selection.n <= 1) {
+                if(e->type == Entity::CIRCLE && selection.Size() <= 1) {
                     // Drag the radius.
                     ClearSelection();
                     pending.circle = hover.entity;
@@ -315,8 +313,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                 orig.mouse = mp;
 
                 // Now apply this rotation to the points being dragged.
-                List<hEntity> *lhe = &(pending.points);
-                for(hEntity *he = lhe->First(); he; he = lhe->NextAfter(he)) {
+                for(hEntity *he : pending.points) {
                     Entity *e = SK.GetEntity(*he);
                     if(e->type != Entity::POINT_N_ROT_TRANS) {
                         if(ctrlDown) {
@@ -340,8 +337,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                     SS.MarkGroupDirtyByEntity(e->h);
                 }
             } else {
-                List<hEntity> *lhe = &(pending.points);
-                for(hEntity *he = lhe->First(); he; he = lhe->NextAfter(he)) {
+                for(hEntity *he : pending.points) {
                     UpdateDraggedPoint(*he, x, y);
                     SS.MarkGroupDirtyByEntity(*he);
                 }
@@ -471,9 +467,8 @@ void GraphicsWindow::MouseMiddleOrRightDown(double x, double y) {
 
 void GraphicsWindow::ContextMenuListStyles(void) {
     CreateContextSubmenu();
-    Style *s;
     bool empty = true;
-    for(s = SK.style.First(); s; s = SK.style.NextAfter(s)) {
+    for(Style *s : SK.style) {
         if(s->h.v < Style::FIRST_CUSTOM) continue;
 
         AddContextMenuItem(s->DescriptionString(), CMNU_FIRST_STYLE + s->h.v);
@@ -550,15 +545,13 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
 
         if(gs.points == 1) {
             Entity *p = SK.GetEntity(gs.point[0]);
-            Constraint *c;
-            IdList<Constraint,hConstraint> *lc = &(SK.constraint);
-            for(c = lc->First(); c; c = lc->NextAfter(c)) {
-                if(c->type != Constraint::POINTS_COINCIDENT) continue;
-                if(c->ptA.v == p->h.v || c->ptB.v == p->h.v) {
-                    break;
-                }
-            }
-            if(c) {
+            if(std::any_of(SK.constraint.begin(), SK.constraint.end(),
+                    [p](const Constraint* c) {
+                        if(c->type != Constraint::POINTS_COINCIDENT) return false;
+                        if(c->ptA.v == p->h.v || c->ptB.v == p->h.v)
+                            return true;
+                        return false;
+                    })) {
                 AddContextMenuItem("Delete Point-Coincident Constraint",
                                    CMNU_DEL_COINCIDENT);
             }
@@ -570,7 +563,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
         }
     }
 
-    if(SS.clipboard.r.n > 0 && LockedInWorkplane()) {
+    if(SS.clipboard.r.Size() > 0 && LockedInWorkplane()) {
         AddContextMenuItem("Paste", CMNU_PASTE_SEL);
     }
 
@@ -582,7 +575,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
     // If only one item is selected, then it must be the one that we just
     // selected from the hovered item; in which case unselect all and hovered
     // are equivalent.
-    if(!hover.IsEmpty() && selection.n > 1) {
+    if(!hover.IsEmpty() && selection.Size() > 1) {
         AddContextMenuItem("Unselect Hovered", CMNU_UNSELECT_HOVERED);
     }
 
@@ -633,8 +626,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
             if(!p->IsPoint()) break;
 
             SK.constraint.ClearTags();
-            Constraint *c;
-            for(c = SK.constraint.First(); c; c = SK.constraint.NextAfter(c)) {
+            for(Constraint *c : SK.constraint) {
                 if(c->type != Constraint::POINTS_COINCIDENT) continue;
                 if(c->ptA.v == p->h.v || c->ptB.v == p->h.v) {
                     c->tag = 1;
@@ -728,7 +720,7 @@ hRequest GraphicsWindow::AddRequest(int type, bool rememberForUndo) {
     }
     r.workplane = ActiveWorkplane();
     r.type = type;
-    SK.request.AddAndAssignId(&r);
+    SK.request.AddAndAssignId(r);
 
     // We must regenerate the parameters, so that the code that tries to
     // place this request's entities where the mouse is can do so. But
@@ -941,7 +933,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             c.type        = Constraint::COMMENT;
             c.disp.offset = v;
             c.comment.strcpy("NEW COMMENT -- DOUBLE-CLICK TO EDIT");
-            Constraint::AddConstraint(&c);
+            Constraint::AddConstraint(c);
             break;
         }
 
@@ -1174,7 +1166,7 @@ void GraphicsWindow::EditControlDone(const char *s) {
         return;
     }
 
-    Expr *e = Expr::From(s, true);
+    ExprRef e = Expr::From(s, true);
     if(e) {
         SS.UndoRemember();
 

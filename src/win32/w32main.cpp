@@ -945,7 +945,7 @@ void SolveSpace::LoadAllFontFiles(void)
         strcat(fullPath, wfd.cFileName);
 
         strcpy(tf.fontFile, fullPath);
-        SS.fonts.l.Add(&tf);
+        SS.fonts.l.Add(tf);
 
         if(!FindNextFile(h, &wfd)) break;
     }

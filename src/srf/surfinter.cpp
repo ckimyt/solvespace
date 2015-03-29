@@ -23,11 +23,11 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     // Now we have to piecewise linearize the curve. If there's already an
     // identical curve in the shell, then follow that pwl exactly, otherwise
     // calculate from scratch.
-    SCurve split, *existing = NULL, *se;
+    SCurve split, *existing = NULL;
     SBezier sbrev = *sb;
     sbrev.Reverse();
     bool backwards = false;
-    for(se = into->curve.First(); se; se = into->curve.NextAfter(se)) {
+    for(SCurve *se : into->curve) {
         if(se->isExact) {
             if(sb->Equals(&(se->exact))) {
                 existing = se;
@@ -41,9 +41,8 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
         }
     }
     if(existing) {
-        SCurvePt *v;
-        for(v = existing->pts.First(); v; v = existing->pts.NextAfter(v)) {
-            sc.pts.Add(v);
+        for(SCurvePt *v : existing->pts) {
+            sc.pts.Add(*v);
         }
         if(backwards) sc.pts.Reverse();
         split = sc = {};
@@ -55,9 +54,8 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     }
 
     // Test if the curve lies entirely outside one of the
-    SCurvePt *scpt;
     bool withinA = false, withinB = false;
-    for(scpt = split.pts.First(); scpt; scpt = split.pts.NextAfter(scpt)) {
+    for(SCurvePt *scpt : split.pts) {
         double tol = 0.01;
         Point2d puv;
         ClosestPointTo(scpt->p, &puv);
@@ -100,7 +98,7 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     if((sb->Start()).Equals(sb->Finish())) oops();
 
     split.source = SCurve::FROM_INTERSECTION;
-    into->curve.AddAndAssignId(&split);
+    into->curve.AddAndAssignId(split);
 }
 
 void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
@@ -218,8 +216,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             sext->AllPointsIntersecting(
                 p0, p0.Plus(dp), &inters, false, false, true);
 
-            SInter *si;
-            for(si = inters.First(); si; si = inters.NextAfter(si)) {
+            for(SInter *si : inters) {
                 Vector al = along.ScaledBy(0.5);
                 SBezier bezier;
                 bezier = SBezier::From((si->p).Minus(al), (si->p).Plus(al));
@@ -275,7 +272,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
         oft.MakePwlInto(&lv);
 
         int i;
-        for(i = 0; i < lv.n - 1; i++) {
+        for(i = 0; i < lv.Size() - 1; i++) {
             Vector pa = lv.elem[i], pb = lv.elem[i+1];
             pa = pa.Minus(axis.ScaledBy(pa.Dot(axis)));
             pb = pb.Minus(axis.ScaledBy(pb.Dot(axis)));
@@ -285,8 +282,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             b->AllPointsIntersecting(pa, pb, &inters, true, false, false);
         }
 
-        SInter *si;
-        for(si = inters.First(); si; si = inters.NextAfter(si)) {
+        for(SInter *si : inters) {
             Vector p = (si->p).Minus(axis.ScaledBy((si->p).Dot(axis)));
             double ub, vb;
             b->ClosestPointTo(p, &ub, &vb, true);
@@ -319,13 +315,12 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             SEdgeList el = {};
             srfA->MakeEdgesInto(shA, &el, AS_XYZ, NULL);
 
-            SEdge *se;
-            for(se = el.l.First(); se; se = el.l.NextAfter(se)) {
+            for(SEdge *se : el.l) {
                 List<SInter> lsi = {};
 
                 srfB->AllPointsIntersecting(se->a, se->b, &lsi,
                     true, true, false);
-                if(lsi.n == 0) continue;
+                if(lsi.Size() == 0) continue;
 
                 // Find the other surface that this curve trims.
                 hSCurve hsc = { (uint32_t)se->auxA };
@@ -334,8 +329,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                                                     sc->surfB : sc->surfA;
                 SSurface *other = shA->surface.FindById(hother);
 
-                SInter *si;
-                for(si = lsi.First(); si; si = lsi.NextAfter(si)) {
+                for(SInter *si : lsi) {
                     Vector p = si->p;
                     double u, v;
                     srfB->ClosestPointTo(p, &u, &v);
@@ -351,7 +345,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                         sp.auxv = n.Cross((se->b).Minus(se->a));
                         sp.auxv = (sp.auxv).WithMagnitude(1);
 
-                        spl.l.Add(&sp);
+                        spl.l.Add(sp);
                     }
                 }
                 lsi.Clear();
@@ -360,7 +354,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             el.Clear();
         }
 
-        while(spl.l.n >= 2) {
+        while(spl.l.Size() >= 2) {
             SCurve sc = {};
             sc.surfA = h;
             sc.surfB = b->h;
@@ -381,7 +375,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             SCurvePt padd = {};
             padd.vertex = true;
             padd.p = start;
-            sc.pts.Add(&padd);
+            sc.pts.Add(padd);
 
             Point2d pa, pb;
             Vector np, npc = Vector::From(0, 0, 0);
@@ -429,8 +423,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                     }
                 }
 
-                SPoint *sp;
-                for(sp = spl.l.First(); sp; sp = spl.l.NextAfter(sp)) {
+                for(SPoint *sp : spl.l) {
                     if((sp->p).OnLineSegment(start, npc, 2*SS.ChordTolMm())) {
                         sp->tag = 1;
                         a = maxsteps;
@@ -440,7 +433,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
 
                 padd.p = npc;
                 padd.vertex = (a == maxsteps);
-                sc.pts.Add(&padd);
+                sc.pts.Add(padd);
 
                 start = npc;
             }
@@ -450,7 +443,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             // And now we split and insert the curve
             SCurve split = sc.MakeCopySplitAgainst(agnstA, agnstB, this, b);
             sc.Clear();
-            into->curve.AddAndAssignId(&split);
+            into->curve.AddAndAssignId(split);
         }
         spl.Clear();
     }
@@ -499,15 +492,13 @@ bool SSurface::CoincidentWithPlane(Vector n, double d) {
 void SShell::MakeCoincidentEdgesInto(SSurface *proto, bool sameNormal,
                                      SEdgeList *el, SShell *useCurvesFrom)
 {
-    SSurface *ss;
-    for(ss = surface.First(); ss; ss = surface.NextAfter(ss)) {
+    for(SSurface *ss : surface) {
         if(proto->CoincidentWith(ss, sameNormal)) {
             ss->MakeEdgesInto(this, el, SSurface::AS_XYZ, useCurvesFrom);
         }
     }
 
-    SEdge *se;
-    for(se = el->l.First(); se; se = el->l.NextAfter(se)) {
+    for(SEdge *se : el->l) {
         double ua, va, ub, vb;
         proto->ClosestPointTo(se->a, &ua, &va);
         proto->ClosestPointTo(se->b, &ub, &vb);

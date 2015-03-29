@@ -197,7 +197,7 @@ void TextWindow::ShowConfiguration(void) {
     Printf(false, "%Ba   %@ %Fl%Ll%f%D[change]%E; now %d triangles",
         SS.chordTol,
         &ScreenChangeChordTolerance, 0,
-        SK.GetGroup(SS.GW.activeGroup)->displayMesh.l.n);
+        SK.GetGroup(SS.GW.activeGroup)->displayMesh.l.Size());
     Printf(false, "%Ft max piecewise linear segments%E");
     Printf(false, "%Ba   %d %Fl%Ll%f[change]%E",
         SS.maxSegments,
@@ -362,7 +362,7 @@ bool TextWindow::EditControlDoneForConfiguration(const char *s) {
             break;
         }
         case EDIT_EXPORT_SCALE: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double ev = e->Eval();
                 if(fabs(ev) < 0.001 || isnan(ev)) {
@@ -374,7 +374,7 @@ bool TextWindow::EditControlDoneForConfiguration(const char *s) {
             break;
         }
         case EDIT_EXPORT_OFFSET: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) {
                 double ev = SS.ExprToMm(e);
                 if(isnan(ev) || ev < 0) {
@@ -386,7 +386,7 @@ bool TextWindow::EditControlDoneForConfiguration(const char *s) {
             break;
         }
         case EDIT_CANVAS_SIZE: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(!e) {
                 break;
             }
@@ -405,23 +405,23 @@ bool TextWindow::EditControlDoneForConfiguration(const char *s) {
             break;
         }
         case EDIT_G_CODE_DEPTH: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) SS.gCode.depth = (float)SS.ExprToMm(e);
             break;
         }
         case EDIT_G_CODE_PASSES: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) SS.gCode.passes = (int)(e->Eval());
             SS.gCode.passes = max(1, min(1000, SS.gCode.passes));
             break;
         }
         case EDIT_G_CODE_FEED: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) SS.gCode.feed = (float)SS.ExprToMm(e);
             break;
         }
         case EDIT_G_CODE_PLUNGE_FEED: {
-            Expr *e = Expr::From(s, true);
+            ExprRef e = Expr::From(s, true);
             if(e) SS.gCode.plungeFeed = (float)SS.ExprToMm(e);
             break;
         }

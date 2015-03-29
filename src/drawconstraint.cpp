@@ -555,7 +555,7 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
         case POINTS_COINCIDENT: {
             if(!dogd.drawing) {
                 for(int i = 0; i < 2; i++) {
-                    Vector p = SK.GetEntity(i == 0 ? ptA : ptB)-> PointGetNum();
+                    Vector p = SK.GetEntity(i == 0 ? ptA : ptB)->PointGetNum();
                     Point2d pp = SS.GW.ProjectPoint(p);
                     // The point is selected within a radius of 7, from the
                     // same center; so if the point is visible, then this
@@ -585,7 +585,7 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
                     Vector r = SS.GW.projRight.ScaledBy((a+1)/SS.GW.scale);
                     Vector d = SS.GW.projUp.ScaledBy((2-a)/SS.GW.scale);
                     for(int i = 0; i < 2; i++) {
-                        Vector p = SK.GetEntity(i == 0 ? ptA : ptB)-> PointGetNum();
+                        Vector p = SK.GetEntity(i == 0 ? ptA : ptB)->PointGetNum();
                         glBegin(GL_QUADS);
                             ssglVertex3v(p.Plus (r).Plus (d));
                             ssglVertex3v(p.Plus (r).Minus(d));

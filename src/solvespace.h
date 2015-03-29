@@ -17,6 +17,7 @@
 #include <math.h>
 #include <limits.h>
 #include <algorithm>
+#include <memory>
 #ifdef HAVE_STDINT_H
 #   include <stdint.h>
 #endif
@@ -109,6 +110,7 @@ inline double Random(double vmax) {
 }
 
 class Expr;
+typedef std::shared_ptr<Expr> ExprRef;
 class ExprVector;
 class ExprQuaternion;
 class RgbColor;
@@ -372,7 +374,7 @@ public:
         // We're solving AX = B
         int m, n;
         struct {
-            Expr        *sym[MAX_UNKNOWNS][MAX_UNKNOWNS];
+            ExprRef      sym[MAX_UNKNOWNS][MAX_UNKNOWNS];
             double       num[MAX_UNKNOWNS][MAX_UNKNOWNS];
         }           A;
 
@@ -385,7 +387,7 @@ public:
         double      X[MAX_UNKNOWNS];
 
         struct {
-            Expr        *sym[MAX_UNKNOWNS];
+            ExprRef      sym[MAX_UNKNOWNS];
             double       num[MAX_UNKNOWNS];
         }           B;
     } mat;
@@ -766,7 +768,7 @@ public:
     int      afterDecimalInch;
 
     char *MmToString(double v);
-    double ExprToMm(Expr *e);
+    double ExprToMm(ExprRef e);
     double StringToMm(const char *s);
     const char *UnitName(void);
     double MmPerUnit(void);
