@@ -63,16 +63,17 @@ CHECK_INCLUDE_FILE("stdint.h" HAVE_STDINT_H)
 
 find_package(OpenGL REQUIRED)
 
+message(STATUS "Using in-tree libdxfrw")
+add_subdirectory(extlib/libdxfrw)
+
 if(WIN32)
     find_package(PNG)
 
     if(NOT PNG_FOUND)
         message(STATUS "Using in-tree zlib")
-
         add_subdirectory(extlib/zlib)
 
         message(STATUS "Using in-tree libpng")
-
         set(ZLIB_LIBRARY
             zlibstatic)
         set(ZLIB_INCLUDE_DIR
