@@ -138,9 +138,6 @@ endif()
 
 # components
 
-if(WIN32)
-    add_subdirectory(tools)
-endif()
-
+add_subdirectory(tools)
 add_subdirectory(src)
 add_subdirectory(exposed)
