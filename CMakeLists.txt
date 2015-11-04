@@ -24,15 +24,6 @@ if(WIN32)
     set(DISABLE_TTF2C CACHE BOOL "Disable font regeneration with ttf2c, for use on CI")
 endif()
 
-if(APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
-endif()
-
-if(UNIX AND NOT APPLE)
-    # We want C++11 for gtkmm, but Ubuntu 14.10's gcc is too old for that
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-endif()
-
 if(NOT WIN32 AND NOT APPLE)
     set(GUI gtk2 CACHE STRING "GUI toolkit to use (one of: gtk2 gtk3)")
 endif()
@@ -50,13 +41,19 @@ if(WIN32)
         -DWIN32_LEAN_AND_MEAN=1)
 endif()
 
-if((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
-    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed ${CMAKE_EXE_LINKER_FLAGS}")
-endif()
-
 if(MINGW)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
+if((CMAKE_CXX_PLATFORM_ID STREQUAL "Linux") AND CMAKE_COMPILER_IS_GNUCC)
+    # We want C++11 for gtkmm, but Ubuntu 14.10's gcc is too old for that
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed ${CMAKE_EXE_LINKER_FLAGS}")
+endif()
+
+if(APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
 endif()
 
 # dependencies
