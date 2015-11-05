@@ -84,17 +84,6 @@ void SolveSpace::MakePathAbsolute(const char *basep, char *pathp) {
     strcpy(pathp, out);
 }
 
-bool SolveSpace::StringAllPrintable(const char *str)
-{
-    const char *t;
-    for(t = str; *t; t++) {
-        if(!(isalnum(*t) || *t == '-' || *t == '_')) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool SolveSpace::StringEndsIn(const char *str, const char *ending)
 {
     int i, ls = (int)strlen(str), le = (int)strlen(ending);
@@ -107,6 +96,30 @@ bool SolveSpace::StringEndsIn(const char *str, const char *ending)
         }
     }
     return true;
+}
+
+// See https://github.com/GNOME/glibmm/blob/2fbd9f23/glib/glibmm/ustring.cc#L227
+const char *SolveSpace::ReadUTF8(const char *str, uint32_t *result)
+{
+    *result = (unsigned char) *str;
+
+    if((*result & 0x80) != 0)
+    {
+      unsigned int mask = 0x40;
+
+      do
+      {
+        *result <<= 6;
+        const unsigned int c = (unsigned char) (*++str);
+        mask   <<= 5;
+        *result  += c - 0x80;
+      }
+      while((*result & mask) != 0);
+
+      *result &= mask - 1;
+    }
+
+    return str + 1;
 }
 
 void SolveSpace::MakeMatrix(double *mat,
