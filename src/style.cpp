@@ -86,9 +86,9 @@ void Style::CreateDefaultStyle(hStyle h) {
     ns.fillColor    = RGBf(0.3, 0.3, 0.3);
     ns.h            = h;
     if(isDefaultStyle) {
-        ns.name.strcpy(CnfPrefixToName(d->cnfPrefix));
+        ns.name = CnfPrefixToName(d->cnfPrefix);
     } else {
-        ns.name.strcpy("new-custom-style");
+        ns.name = "new-custom-style";
     }
 
     SK.style.Add(&ns);
@@ -110,7 +110,7 @@ void Style::LoadFactoryDefaults(void) {
         s->exportable   = true;
         s->filled       = false;
         s->fillColor    = RGBf(0.3, 0.3, 0.3);
-        s->name.strcpy(CnfPrefixToName(d->cnfPrefix));
+        s->name         = CnfPrefixToName(d->cnfPrefix);
     }
     SS.backgroundColor = RGBi(0, 0, 0);
     if(SS.bgImage.fromFile) MemFree(SS.bgImage.fromFile);
@@ -321,10 +321,10 @@ hStyle Style::ForEntity(hEntity he) {
 
 char *Style::DescriptionString(void) {
     static char ret[100];
-    if(name.str[0]) {
-        sprintf(ret, "s%03x-%s", h.v, name.str);
-    } else {
+    if(name.empty()) {
         sprintf(ret, "s%03x-(unnamed)", h.v);
+    } else {
+        sprintf(ret, "s%03x-%s", h.v, name.c_str());
     }
     return ret;
 }
@@ -488,7 +488,7 @@ void TextWindow::ShowListOfStyles(void) {
 void TextWindow::ScreenChangeStyleName(int link, uint32_t v) {
     hStyle hs = { v };
     Style *s = Style::Get(hs);
-    SS.TW.ShowEditControl(10, 12, s->name.str);
+    SS.TW.ShowEditControl(10, 12, s->name.c_str());
     SS.TW.edit.style = hs;
     SS.TW.edit.meaning = EDIT_STYLE_NAME;
 }
@@ -700,7 +700,7 @@ bool TextWindow::EditControlDoneForStyles(const char *str) {
             } else {
                 SS.UndoRemember();
                 s = Style::Get(edit.style);
-                s->name.strcpy(str);
+                s->name = str;
             }
             break;
 

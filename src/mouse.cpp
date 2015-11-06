@@ -933,8 +933,8 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             }
             hr = AddRequest(Request::TTF_TEXT);
             Request *r = SK.GetRequest(hr);
-            r->str.strcpy("Abc");
-            r->font.strcpy("arial.ttf");
+            r->str = "Abc";
+            r->font = "arial.ttf";
 
             SK.GetEntity(hr.entity(1))->PointForceTo(v);
             SK.GetEntity(hr.entity(2))->PointForceTo(v);
@@ -952,7 +952,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             c.workplane   = SS.GW.ActiveWorkplane();
             c.type        = Constraint::COMMENT;
             c.disp.offset = v;
-            c.comment.strcpy("NEW COMMENT -- DOUBLE-CLICK TO EDIT");
+            c.comment = "NEW COMMENT -- DOUBLE-CLICK TO EDIT";
             Constraint::AddConstraint(&c);
             break;
         }
@@ -1148,7 +1148,7 @@ void GraphicsWindow::MouseLeftDoubleClick(double mx, double my) {
         char s[1024];
         switch(c->type) {
             case Constraint::COMMENT:
-                strcpy(s, c->comment.str);
+                strcpy(s, c->comment.c_str());
                 break;
 
             case Constraint::ANGLE:
@@ -1193,7 +1193,7 @@ void GraphicsWindow::EditControlDone(const char *s) {
 
     if(c->type == Constraint::COMMENT) {
         SS.UndoRemember();
-        c->comment.strcpy(s);
+        c->comment = s;
         return;
     }
 

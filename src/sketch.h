@@ -196,7 +196,7 @@ public:
     SShell                     impShell;
     EntityList                 impEntity;
 
-    NameStr     name;
+    std::string     name;
 
 
     void Activate(void);
@@ -290,8 +290,8 @@ public:
     hStyle      style;
 
     bool        construction;
-    NameStr     str;
-    NameStr     font;
+    std::string str;
+    std::string font;
 
     static hParam AddParam(ParamList *param, hParam hp);
     void Generate(EntityList *entity, ParamList *param);
@@ -362,8 +362,8 @@ public:
     Quaternion  numNormal;
     double      numDistance;
 
-    NameStr     str;
-    NameStr     font;
+    std::string str;
+    std::string font;
 
     // For entities that are derived by a transformation, the number of
     // times to apply the transformation.
@@ -608,7 +608,7 @@ public:
     bool        other2;
 
     bool        reference;  // a ref dimension, that generates no eqs
-    NameStr     comment;    // since comments are represented as constraints
+    std::string comment;    // since comments are represented as constraints
 
     bool HasLabel(void);
 
@@ -728,7 +728,7 @@ public:
         FIRST_CUSTOM   = 0x100
     };
 
-    NameStr     name;
+    std::string name;
 
     enum {
         UNITS_AS_PIXELS   = 0,
@@ -838,8 +838,8 @@ public:
     int         type;
     int         extraPoints;
     hStyle      style;
-    NameStr     str;
-    NameStr     font;
+    std::string str;
+    std::string font;
     bool        construction;
 
     Vector      point[MAX_POINTS_IN_ENTITY];

@@ -1407,7 +1407,7 @@ void SetMousePointerToHand(bool is_hand) {
     TW->get_widget().set_cursor_hand(is_hand);
 }
 
-void ShowTextEditControl(int x, int y, char *val) {
+void ShowTextEditControl(int x, int y, const char *val) {
     TW->get_overlay().start_editing(x, y, val);
 }
 

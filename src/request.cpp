@@ -102,8 +102,8 @@ void Request::Generate(IdList<Entity,hEntity> *entity,
     e.style = style;
     e.workplane = workplane;
     e.construction = construction;
-    e.str.strcpy(str.str);
-    e.font.strcpy(font.str);
+    e.str = str;
+    e.font = font;
     e.h = h.entity(0);
 
     // And generate entities for the points

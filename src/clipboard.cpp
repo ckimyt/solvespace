@@ -86,8 +86,8 @@ void GraphicsWindow::CopySelection(void) {
         cr.type         = req;
         cr.extraPoints  = e->extraPoints;
         cr.style        = e->style;
-        cr.str.strcpy(    e->str.str);
-        cr.font.strcpy(   e->font.str);
+        cr.str          = e->str;
+        cr.font         = e->font;
         cr.construction = e->construction;
         {for(int i = 0; i < pts; i++) {
             Vector pt = SK.GetEntity(e->point[i])->PointGetNum();
@@ -133,8 +133,8 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         Request *r = SK.GetRequest(hr);
         r->extraPoints  = cr->extraPoints;
         r->style        = cr->style;
-        r->str.strcpy(    cr->str.str);
-        r->font.strcpy(   cr->font.str);
+        r->str          = cr->str;
+        r->font         = cr->font;
         r->construction = cr->construction;
         // Need to regen to get the right number of points, if extraPoints
         // changed.

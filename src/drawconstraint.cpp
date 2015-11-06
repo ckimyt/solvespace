@@ -66,7 +66,7 @@ char *Constraint::Label(void) {
     } else if(type == LENGTH_DIFFERENCE) {
         sprintf(Ret, "%.3f", valA);
     } else if(type == COMMENT) {
-        strcpy(Ret, comment.str);
+        strcpy(Ret, comment.c_str());
     } else if(type == DIAMETER) {
         if(!other) {
             // leading spaces for diameter symbol

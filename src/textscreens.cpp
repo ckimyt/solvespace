@@ -671,7 +671,7 @@ void TextWindow::EditControlDone(const char *s) {
                 SS.UndoRemember();
 
                 Group *g = SK.GetGroup(edit.group);
-                g->name.strcpy(s);
+                g->name = s;
             }
             break;
         }
@@ -727,7 +727,7 @@ void TextWindow::EditControlDone(const char *s) {
             SS.UndoRemember();
             Request *r = SK.request.FindByIdNoOops(edit.request);
             if(r) {
-                r->str.strcpy(s);
+                r->str = s;
                 SS.MarkGroupDirty(r->group);
                 SS.ScheduleGenerateAll();
             }

@@ -702,7 +702,7 @@ void SolveSpace::InvalidateText(void)
     InvalidateRect(TextWnd, NULL, false);
 }
 
-static void ShowEditControl(HWND h, int x, int y, char *s) {
+static void ShowEditControl(HWND h, int x, int y, const char *s) {
     MoveWindow(h, x, y, EDIT_WIDTH, EDIT_HEIGHT, true);
     ShowWindow(h, SW_SHOW);
     if(s) {
@@ -711,7 +711,7 @@ static void ShowEditControl(HWND h, int x, int y, char *s) {
         SetFocus(h);
     }
 }
-void SolveSpace::ShowTextEditControl(int x, int y, char *s)
+void SolveSpace::ShowTextEditControl(int x, int y, const char *s)
 {
     if(GraphicsEditControlIsVisible()) return;
 

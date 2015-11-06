@@ -17,6 +17,7 @@
 #include <math.h>
 #include <limits.h>
 #include <algorithm>
+#include <string>
 #ifdef HAVE_STDINT_H
 #   include <stdint.h>
 #endif
@@ -210,7 +211,7 @@ void EnableMenuById(int id, bool enabled);
 void ShowGraphicsEditControl(int x, int y, char *s);
 void HideGraphicsEditControl(void);
 bool GraphicsEditControlIsVisible(void);
-void ShowTextEditControl(int x, int y, char *s);
+void ShowTextEditControl(int x, int y, const char *s);
 void HideTextEditControl(void);
 bool TextEditControlIsVisible(void);
 void MoveTextScrollbarTo(int pos, int maxPos, int page);
@@ -450,7 +451,7 @@ public:
     } IntPoint;
 
     char    fontFile[MAX_PATH];
-    NameStr name;
+    std::string name;
     bool    loaded;
 
     // The font itself, plus the mapping from ASCII codes to glyphs
@@ -490,7 +491,7 @@ public:
     void Flush(void);
     void Handle(int *dx, int x, int y, bool onCurve);
     void PlotCharacter(int *dx, int c, double spacing);
-    void PlotString(char *str, double spacing,
+    void PlotString(const char *str, double spacing,
                     SBezierList *sbl, Vector origin, Vector u, Vector v);
 
     Vector TransformIntPoint(int x, int y);
@@ -505,7 +506,7 @@ public:
 
     void LoadAll(void);
 
-    void PlotString(char *font, char *str, double spacing,
+    void PlotString(const char *font, const char *str, double spacing,
                     SBezierList *sbl, Vector origin, Vector u, Vector v);
 };
 

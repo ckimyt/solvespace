@@ -79,7 +79,7 @@ void TextWindow::HideEditControl(void) {
     HideTextEditControl();
 }
 
-void TextWindow::ShowEditControl(int halfRow, int col, char *s) {
+void TextWindow::ShowEditControl(int halfRow, int col, const char *s) {
     editControl.halfRow = halfRow;
     editControl.col = col;
 

@@ -14,7 +14,7 @@ void TextWindow::ScreenEditTtfText(int link, uint32_t v) {
     hRequest hr = { v };
     Request *r = SK.GetRequest(hr);
 
-    SS.TW.ShowEditControl(13, 10, r->str.str);
+    SS.TW.ShowEditControl(13, 10, r->str.c_str());
     SS.TW.edit.meaning = EDIT_TTF_TEXT;
     SS.TW.edit.request = hr;
 }
@@ -35,7 +35,7 @@ void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
     if(!r) return;
 
     SS.UndoRemember();
-    r->font.strcpy(SS.fonts.l.elem[i].FontFileBaseName());
+    r->font = SS.fonts.l.elem[i].FontFileBaseName();
     SS.MarkGroupDirty(r->group);
     SS.ScheduleGenerateAll();
     SS.ScheduleShowTW();
@@ -168,29 +168,29 @@ void TextWindow::DescribeSelection(void) {
 
             case Entity::TTF_TEXT: {
                 Printf(false, "%FtTRUETYPE FONT TEXT%E");
-                Printf(true, "  font = '%Fi%s%E'", e->font.str);
+                Printf(true, "  font = '%Fi%s%E'", e->font.c_str());
                 if(e->h.isFromRequest()) {
                     Printf(false, "  text = '%Fi%s%E' %Fl%Ll%f%D[change]%E",
-                        e->str.str, &ScreenEditTtfText, e->h.request());
+                        e->str.c_str(), &ScreenEditTtfText, e->h.request());
                     Printf(true, "  select new font");
                     SS.fonts.LoadAll();
                     int i;
                     for(i = 0; i < SS.fonts.l.n; i++) {
                         TtfFont *tf = &(SS.fonts.l.elem[i]);
-                        if(strcmp(e->font.str, tf->FontFileBaseName())==0) {
+                        if(strcmp(e->font.c_str(), tf->FontFileBaseName())==0) {
                             Printf(false, "%Bp    %s",
                                 (i & 1) ? 'd' : 'a',
-                                tf->name.str);
+                                tf->name.c_str());
                         } else {
                             Printf(false, "%Bp    %f%D%Fl%Ll%s%E%Bp",
                                 (i & 1) ? 'd' : 'a',
                                 &ScreenSetTtfFont, i,
-                                tf->name.str,
+                                tf->name.c_str(),
                                 (i & 1) ? 'd' : 'a');
                         }
                     }
                 } else {
-                    Printf(false, "  text = '%Fi%s%E'", e->str.str);
+                    Printf(false, "  text = '%Fi%s%E'", e->str.c_str());
                 }
                 break;
             }

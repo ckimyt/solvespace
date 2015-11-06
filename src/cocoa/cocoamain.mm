@@ -1011,7 +1011,7 @@ void SetMousePointerToHand(bool is_hand) {
     [TWView setCursorHand:is_hand];
 }
 
-void ShowTextEditControl(int x, int y, char *str) {
+void ShowTextEditControl(int x, int y, const char *str) {
     return [TWView startEditing:[NSString stringWithUTF8String:str]
                    at:(NSPoint){(CGFloat)x, (CGFloat)y}];
 }
