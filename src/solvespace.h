@@ -791,6 +791,11 @@ public:
     bool tangentArcManual;
     bool tangentArcDeleteOld;
 
+    // Some stuff relating to the dogbone arcs created non-parametrically
+    // as special requests.
+    double dogboneArcRadius;
+    bool dogboneArcDeleteOld;
+
     // The platform-dependent code calls this before entering the msg loop
     void Init(void);
     bool OpenFile(const char *filename);

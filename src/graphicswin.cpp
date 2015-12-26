@@ -123,6 +123,7 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 { 1, NULL,                          0,                  0,       IN, NULL  },
 { 1, "To&ggle Construction",        MNU_CONSTRUCTION,   'G',     IN, mReq  },
 { 1, "Tangent &Arc at Point",       MNU_TANGENT_ARC,    S|'A',   IN, mReq  },
+{ 1, "Dog&bone Arc at Point",       MNU_DOGBONE_ARC,    S|'B',   IN, mReq  },
 { 1, "Split Curves at &Intersection", MNU_SPLIT_CURVES, 'I',     IN, mReq  },
 
 { 0, "&Constrain",                  0,                  0,       IN, NULL  },
@@ -947,6 +948,22 @@ void GraphicsWindow::MenuRequest(int id) {
                       "parameters.");
             } else {
                 SS.TW.GoToScreen(TextWindow::SCREEN_TANGENT_ARC);
+                SS.GW.ForceTextWindowShown();
+                SS.ScheduleShowTW();
+                InvalidateGraphics(); // repaint toolbar
+            }
+            break;
+
+        case MNU_DOGBONE_ARC:
+            SS.GW.GroupSelection();
+            if(SS.GW.gs.n == 1 && SS.GW.gs.points == 1) {
+                SS.GW.MakeDogboneArc();
+            } else if(SS.GW.gs.n != 0) {
+                Error("Bad selection for dogbone arc at point. Select a "
+                      "single point, or select nothing to set up arc "
+                      "parameters.");
+            } else {
+                SS.TW.GoToScreen(TextWindow::SCREEN_DOGBONE_ARC);
                 SS.GW.ForceTextWindowShown();
                 SS.ScheduleShowTW();
                 InvalidateGraphics(); // repaint toolbar

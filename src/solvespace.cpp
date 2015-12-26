@@ -12,6 +12,7 @@ Sketch SolveSpace::SK;
 
 void SolveSpaceUI::Init() {
     SS.tangentArcRadius = 10.0;
+    SS.dogboneArcRadius = 10.0;
 
     // Then, load the registry settings.
     int i;

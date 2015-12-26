@@ -621,6 +621,44 @@ void TextWindow::ShowTangentArc(void) {
 }
 
 //-----------------------------------------------------------------------------
+// When we're creating dogbone arcs (as requests, not as some parametric
+// thing). User gets to specify the radius, and whether the old untrimmed
+// curves are kept or deleted.
+//-----------------------------------------------------------------------------
+void TextWindow::ScreenChangeDogboneArc(int link, uint32_t v) {
+    switch(link) {
+        case 'r': {
+            char str[1024];
+            strcpy(str, SS.MmToString(SS.dogboneArcRadius));
+            SS.TW.edit.meaning = EDIT_DOGBONE_ARC_RADIUS;
+            SS.TW.ShowEditControl(12, 3, str);
+            break;
+        }
+
+        case 'd': SS.dogboneArcDeleteOld = !SS.dogboneArcDeleteOld; break;
+    }
+}
+void TextWindow::ShowDogboneArc(void) {
+    Printf(true, "%FtDOGBONE ARC PARAMETERS%E");
+
+    Printf(true,  "%Ft radius of created arc%E");
+    Printf(false, "%Ba   %s %Fl%Lr%f[change]%E",
+        SS.MmToString(SS.dogboneArcRadius),
+        &(TextWindow::ScreenChangeDogboneArc));
+
+    Printf(false, "");
+    Printf(false, "  %Fd%f%Ld%c  delete original entities afterward%E",
+        &ScreenChangeDogboneArc,
+        SS.dogboneArcDeleteOld ? CHECK_TRUE : CHECK_FALSE);
+
+    Printf(false, "");
+    Printf(false, "To create a dogbone arc at a point,");
+    Printf(false, "select that point and then choose");
+    Printf(false, "Sketch -> Dogbone Arc at Point.");
+    Printf(true, "(or %Fl%Ll%fback to home screen%E)", &ScreenHome);
+}
+
+//-----------------------------------------------------------------------------
 // The edit control is visible, and the user just pressed enter.
 //-----------------------------------------------------------------------------
 void TextWindow::EditControlDone(const char *s) {
@@ -759,6 +797,17 @@ void TextWindow::EditControlDone(const char *s) {
                 break;
             }
             SS.tangentArcRadius = SS.ExprToMm(e);
+            break;
+        }
+
+        case EDIT_DOGBONE_ARC_RADIUS: {
+            Expr *e = Expr::From(s, true);
+            if(!e) break;
+            if(e->Eval() < LENGTH_EPS) {
+                Error("Radius cannot be zero or negative.");
+                break;
+            }
+            SS.dogboneArcRadius = SS.ExprToMm(e);
             break;
         }
 

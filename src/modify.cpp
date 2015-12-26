@@ -406,6 +406,180 @@ void GraphicsWindow::MakeTangentArc(void) {
     SS.ScheduleGenerateAll();
 }
 
+// FIXME: I'm not happy overall with how much the code overlaps with tangent
+// arc above.  Most likely, some of the code should be refactored out into
+// helper functions
+
+//-----------------------------------------------------------------------------
+// A single point must be selected when this function is called. We find two
+// non-construction line segments that join at this point, and create a
+// dogbone arc joining them.
+//-----------------------------------------------------------------------------
+void GraphicsWindow::MakeDogboneArc(void) {
+    // unmodified beginning of MakeTangentArc() code
+
+    if(!LockedInWorkplane()) {
+        Error("Must be sketching in workplane to create dogbone "
+              "arc.");
+        return;
+    }
+
+    // The point corresponding to the vertex to be rounded.
+    Vector pshared = SK.GetEntity(gs.point[0])->PointGetNum();
+    ClearSelection();
+
+    // First, find two requests (that are not construction, and that are
+    // in our group and workplane) that generate entities that have an
+    // endpoint at our vertex to be rounded.
+    int i, c = 0;
+    Entity *ent[2];
+    Request *req[2];
+    hRequest hreq[2];
+    hEntity hent[2];
+    bool pointf[2];
+    for(i = 0; i < SK.request.n; i++) {
+        Request *r = &(SK.request.elem[i]);
+        if(r->group.v != activeGroup.v) continue;
+        if(r->workplane.v != ActiveWorkplane().v) continue;
+        if(r->construction) continue;
+
+	// EXCEPT...dogbone doesn't handle anything but line segments!
+
+        if(r->type != Request::LINE_SEGMENT)
+        {
+            continue;
+        }
+
+        Entity *e = SK.GetEntity(r->h.entity(0));
+        Vector ps = e->EndpointStart(),
+               pf = e->EndpointFinish();
+
+        if(ps.Equals(pshared) || pf.Equals(pshared)) {
+            if(c < 2) {
+                // We record the entity and request and their handles,
+                // and whether the vertex to be rounded is the start or
+                // finish of this entity.
+                ent[c] = e;
+                hent[c] = e->h;
+                req[c] = r;
+                hreq[c] = r->h;
+                pointf[c] = (pf.Equals(pshared));
+            }
+            c++;
+        }
+    }
+    if(c != 2) {
+        Error("To create a tangent arc, select a point where two "
+              "non-construction lines in this group and "
+              "workplane join.");
+        return;
+    }
+
+    // now, our specific dogbone geometry calculations
+    // (see the original examples zip file for a picture)
+
+    // find points A, B, and C
+    Vector bb = pshared;
+    Vector aa = pointf[0] ? ent[0]->EndpointStart() : ent[0]->EndpointFinish();
+    Vector cc = pointf[1] ? ent[1]->EndpointStart() : ent[1]->EndpointFinish();
+
+    // compute vectors BA and BC
+    Vector ba = aa.Minus(bb);
+    Vector bc = cc.Minus(bb);
+
+    // theta is the angle <ABC
+    double dot = (ba.WithMagnitude(1)).Dot(bc.WithMagnitude(1));
+    double theta = acos(dot);
+
+    // grab the circle's radius from preferences
+    double rr = SS.dogboneArcRadius;
+
+    // SS, the length of BP and BQ, is 2 * RR * cos(theta / 2)
+    double ss = 2.0 * rr * cos(theta / 2.0);
+
+    // Find points P, Q, and O
+    Vector bp = ba.WithMagnitude(ss);
+    Vector bq = bc.WithMagnitude(ss);
+    Vector bo = (bp.Plus(bq)).WithMagnitude(rr);
+
+    Vector oo = bb.Plus(bo);
+    Vector pp = bb.Plus(bp);
+    Vector qq = bb.Plus(bq);
+
+    double sa = ss / ba.Magnitude();
+    double sc = ss / bc.Magnitude();
+
+    // here starts mingling with more MakeTangentArc() code
+    Entity *wrkpl = SK.GetEntity(ActiveWorkplane());
+    Vector wn = wrkpl->Normal()->NormalN();
+
+    // The sign of vv determines whether shortest distance is
+    // clockwise or anti-clockwise.
+    Vector v = (wn.Cross(ba)).WithMagnitude(1);
+    double vv = bc.Dot(v);
+    int a, b;
+    if(vv < 0) {
+        a = 1; b = 2;
+    } else {
+        a = 2; b = 1;
+    }
+
+    SS.UndoRemember();
+
+    hRequest harc = AddRequest(Request::ARC_OF_CIRCLE, false);
+    Entity *earc = SK.GetEntity(harc.entity(0));
+    hEntity hearc = earc->h;
+
+    // force the new arc points to BO (center), BP and BQ
+    SK.GetEntity(earc->point[0])->PointForceTo(oo);
+    SK.GetEntity(earc->point[a])->PointForceTo(pp);
+    SK.GetEntity(earc->point[b])->PointForceTo(qq);
+
+    earc = NULL;
+
+    // split the original segments at the arc intersections
+    SplitLine(hent[0], pp);
+    SplitLine(hent[1], qq);
+
+    // FIXME: this code is a watered-down version of the first loop
+    // we're finding the two segments attached to point B
+    // there's probably a better way, but I don't know the code very
+    // well
+
+    // Now either make the original entities construction, or delete them
+    // entirely, according to user preference.
+    SK.request.ClearTags();
+    for(i = 0; i < SK.request.n; i++) {
+        Request *r = &(SK.request.elem[i]);
+        if(r->group.v != activeGroup.v) continue;
+        if(r->workplane.v != ActiveWorkplane().v) continue;
+        if(r->construction) continue;
+
+        if(r->type != Request::LINE_SEGMENT) {
+            continue;
+        }
+
+        Entity *e = SK.GetEntity(r->h.entity(0));
+        Vector ps = e->EndpointStart(),
+               pf = e->EndpointFinish();
+
+        if(ps.Equals(pshared) || pf.Equals(pshared)) {
+            if(SS.dogboneArcDeleteOld) {
+                r->tag = 1;
+            } else {
+                r->construction = true;
+            }
+        }
+    }
+
+    // resume unmodified MakeTangentArc() code
+    if(SS.dogboneArcDeleteOld) {
+        DeleteTaggedRequests();
+    }
+
+    SS.ScheduleGenerateAll();
+}
+
 hEntity GraphicsWindow::SplitLine(hEntity he, Vector pinter) {
     // Save the original endpoints, since we're about to delete this entity.
     Entity *e01 = SK.GetEntity(he);

@@ -109,7 +109,8 @@ public:
         SCREEN_STYLE_INFO          = 6,
         SCREEN_PASTE_TRANSFORMED   = 7,
         SCREEN_EDIT_VIEW           = 8,
-        SCREEN_TANGENT_ARC         = 9
+        SCREEN_TANGENT_ARC         = 9,
+        SCREEN_DOGBONE_ARC         = 10
     };
     typedef struct {
         int         screen;
@@ -181,7 +182,8 @@ public:
         EDIT_VIEW_PROJ_RIGHT       = 702,
         EDIT_VIEW_PROJ_UP          = 703,
         // For tangent arc
-        EDIT_TANGENT_ARC_RADIUS    = 800
+        EDIT_TANGENT_ARC_RADIUS    = 800,
+        EDIT_DOGBONE_ARC_RADIUS    = 900
     };
     struct {
         bool        showAgain;
@@ -226,6 +228,7 @@ public:
     void ShowPasteTransformed(void);
     void ShowEditView(void);
     void ShowTangentArc(void);
+    void ShowDogboneArc(void);
     // Special screen, based on selection
     void DescribeSelection(void);
 
@@ -283,6 +286,7 @@ public:
     static void ScreenStepDimGo(int link, uint32_t v);
 
     static void ScreenChangeTangentArc(int link, uint32_t v);
+    static void ScreenChangeDogboneArc(int link, uint32_t v);
 
     static void ScreenPasteTransformed(int link, uint32_t v);
 
@@ -385,6 +389,7 @@ public:
         MNU_TTF_TEXT,
         MNU_SPLIT_CURVES,
         MNU_TANGENT_ARC,
+        MNU_DOGBONE_ARC,
         MNU_CONSTRUCTION,
         // Group
         MNU_GROUP_3D,
@@ -575,6 +580,7 @@ public:
         void ConstrainPointIfCoincident(hEntity hpt);
     };
     void MakeTangentArc(void);
+    void MakeDogboneArc(void);
     void SplitLinesOrCurves(void);
     hEntity SplitEntity(hEntity he, Vector pinter);
     hEntity SplitLine(hEntity he, Vector pinter);
