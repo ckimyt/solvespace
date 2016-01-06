@@ -425,7 +425,8 @@ void GraphicsWindow::MakeDogboneArc(void) {
     }
 
     // The point corresponding to the vertex to be rounded.
-    Vector pshared = SK.GetEntity(gs.point[0])->PointGetNum();
+    hEntity hbb = gs.point[0];
+    Vector pshared = SK.GetEntity(hbb)->PointGetNum();
     ClearSelection();
 
     // First, find two requests (that are not construction, and that are
@@ -535,11 +536,19 @@ void GraphicsWindow::MakeDogboneArc(void) {
     SK.GetEntity(earc->point[a])->PointForceTo(pp);
     SK.GetEntity(earc->point[b])->PointForceTo(qq);
 
-    earc = NULL;
-
     // split the original segments at the arc intersections
-    SplitLine(hent[0], pp);
-    SplitLine(hent[1], qq);
+    hEntity hpp = SplitEntity(hent[0], pp);
+    hEntity hqq = SplitEntity(hent[1], qq);
+
+
+    // FIXME: what I want is to constrain the originally selected point
+    // to line on the newly created arc, but I'm thinking that's not actually
+    // possible right now.
+    //Constraint::Constrain(Constraint::PT_ON_ARC, earc, hbb);
+    Constraint::ConstrainCoincident(earc->point[a], hpp);
+    Constraint::ConstrainCoincident(earc->point[b], hqq);
+
+    earc = NULL;
 
     // FIXME: this code is a watered-down version of the first loop
     // we're finding the two segments attached to point B
